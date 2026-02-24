@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import NotificacionesWidget from '@/components/NotificacionesWidget'
+import GastosTransparenciaWidget from '@/components/GastosTransparenciaWidget'
 
 export default async function PropietarioDashboardPage() {
     const supabase = await createClient()
@@ -19,7 +20,12 @@ export default async function PropietarioDashboardPage() {
     // Cargar datos reales básicos del propietario
     const { data: perfil } = await supabase
         .from('perfiles')
-        .select('nombres, estado_solvencia, condominio_id, condominios(nombre)')
+        .select(`
+            nombres, 
+            estado_solvencia, 
+            condominio_id, 
+            condominios(nombre, carta_residencia_url)
+        `)
         .eq('id', perfilId)
         .single()
 
@@ -65,6 +71,14 @@ export default async function PropietarioDashboardPage() {
             tasaBcv = dataBcv.promedio
         }
     } catch (e) { console.error("Error obteniendo BCV general") }
+
+    // Cargar Egresos para el widget de transparencia
+    const { data: egresos } = await supabase
+        .from('egresos')
+        .select('id, descripcion, monto_usd, fecha_gasto, categoria')
+        .eq('condominio_id', perfil.condominio_id)
+        .order('fecha_gasto', { ascending: false })
+        .limit(5)
 
     return (
         <div className="relative">
@@ -129,27 +143,17 @@ export default async function PropietarioDashboardPage() {
                     </div>
                 </div>
 
-                {/* Action Button: Reportar Pago */}
-                <button className="w-full bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-xl py-4 px-6 flex items-center justify-center gap-3 font-semibold shadow-sm transition-colors">
+                {/* Action Button: Reportar Pago (Vinculado) */}
+                <Link
+                    href="/dashboard/propietario/pagos/nuevo"
+                    className="w-full bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-xl py-4 px-6 flex items-center justify-center gap-3 font-semibold shadow-sm transition-colors"
+                >
                     <Banknote className="w-6 h-6" />
                     Reportar Pago Móvil
-                </button>
+                </Link>
 
-                {/* Carta de Residencia Card */}
-                <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-slate-100 p-3 rounded-lg">
-                            <FileText className="w-6 h-6 text-[#1e3a8a]" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-sm">Carta de Residencia</h3>
-                            <p className="text-xs text-slate-500">Descargar documento PDF</p>
-                        </div>
-                    </div>
-                    <button className="p-2 text-slate-400 hover:text-[#1e3a8a] transition-colors rounded-full hover:bg-slate-50">
-                        <Download className="w-5 h-5" />
-                    </button>
-                </div>
+                {/* Gastos: Transparencia */}
+                <GastosTransparenciaWidget egresos={egresos || []} />
 
                 {/* Cartelera Virtual (Lista de Anuncios) */}
                 <div id="muro-vecinal" className="pt-2 scroll-mt-24">

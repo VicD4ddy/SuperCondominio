@@ -33,10 +33,10 @@ export async function emitirCobroMasivoAction(formData: FormData) {
             return { error: 'Todos los campos son obligatorios' }
         }
 
-        // Obtener todos los inmuebles del condominio y su alícuota
+        // Obtener todos los inmuebles del condominio
         const { data: inmuebles, error: errInmuebles } = await supabase
             .from('inmuebles')
-            .select('id, alicuota')
+            .select('id')
             .eq('condominio_id', condominioId)
 
         if (errInmuebles || !inmuebles || inmuebles.length === 0) {

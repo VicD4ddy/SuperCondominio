@@ -33,8 +33,8 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
             <div className="max-w-md w-full p-8 bg-white rounded-xl shadow-lg border border-slate-100 mx-4">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-slate-900">CondoSolución</h1>
-                    <p className="text-slate-500 mt-2">Ingresa tus credenciales para acceder a tu panel</p>
+                    <h1 className="text-3xl font-extrabold text-[#1e3a8a] tracking-tight">SuperCondominio</h1>
+                    <p className="text-slate-500 mt-2 font-medium">Gestión inteligente de tu comunidad</p>
                 </div>
 
                 <form action={handleSubmit} className="space-y-6">

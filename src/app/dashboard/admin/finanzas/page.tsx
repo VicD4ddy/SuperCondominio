@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { Wallet, TrendingUp, HandCoins, ArrowRight, Receipt, FileText, Settings2 } from 'lucide-react'
+import { Wallet, TrendingUp, HandCoins, ArrowRight, Receipt, FileText, TrendingDown } from 'lucide-react'
 import ParametrosFinancierosCard from './ParametrosFinancierosCard'
 
 export default async function AdminFinanzasPage() {
@@ -31,7 +31,7 @@ export default async function AdminFinanzasPage() {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
     }
 
-    // Calcular montos desde la tabla recibos_cobro
+    // Calcular montos desde la tabla recibos_cobro (INGRESOS)
     const { data: recibos } = await supabase
         .from('recibos_cobro')
         .select('monto_usd, monto_pagado_usd, estado')
@@ -51,6 +51,15 @@ export default async function AdminFinanzasPage() {
         });
     }
 
+    // Calcular montos de egresos (GASTOS)
+    const { data: egresos } = await supabase
+        .from('egresos')
+        .select('monto_usd')
+        .eq('condominio_id', adminPerfil.condominio_id)
+
+    const totalEgresos = egresos?.reduce((acc, curr) => acc + Number(curr.monto_usd), 0) || 0;
+    const balanceNeto = totalRecaudado - totalEgresos;
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
             {/* Header Rediseñado */}
@@ -64,11 +73,11 @@ export default async function AdminFinanzasPage() {
 
                 {/* Main Card */}
                 <div className="bg-gradient-to-br from-white/10 to-transparent p-5 rounded-2xl border border-white/20 backdrop-blur-sm">
-                    <p className="text-blue-200 text-xs font-bold tracking-widest mb-1">CFO DASHBOARD</p>
+                    <p className="text-blue-200 text-xs font-bold tracking-widest mb-1">BALANCE NETO (CAJA)</p>
                     <div className="flex justify-between items-end">
                         <div>
-                            <p className="text-white/60 text-sm mb-1">Recaudación Total</p>
-                            <h2 className="text-3xl font-bold tracking-tight">${totalRecaudado.toFixed(2)}</h2>
+                            <p className="text-white/60 text-sm mb-1">Caja Disponible</p>
+                            <h2 className="text-3xl font-bold tracking-tight">${balanceNeto.toFixed(2)}</h2>
                         </div>
                         <div className="bg-white/20 p-3 rounded-xl">
                             <Wallet className="w-6 h-6" />
@@ -82,15 +91,23 @@ export default async function AdminFinanzasPage() {
                 <div className="grid grid-cols-2 gap-3">
                     <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
                         <TrendingUp className="w-5 h-5 text-emerald-600 mb-2" />
-                        <p className="text-[10px] font-bold text-emerald-600 tracking-widest uppercase mb-1">EMITIDO</p>
-                        <p className="text-lg font-bold text-emerald-700">${totalEmitido.toFixed(2)}</p>
+                        <p className="text-[10px] font-bold text-emerald-600 tracking-widest uppercase mb-1">INGRESOS</p>
+                        <p className="text-lg font-bold text-emerald-700">${totalRecaudado.toFixed(2)}</p>
                     </div>
 
-                    <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl">
-                        <HandCoins className="w-5 h-5 text-orange-600 mb-2" />
-                        <p className="text-[10px] font-bold text-orange-600 tracking-widest uppercase mb-1">POR COBRAR</p>
-                        <p className="text-lg font-bold text-orange-700">${totalCuentasPorCobrar.toFixed(2)}</p>
+                    <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
+                        <TrendingDown className="w-5 h-5 text-red-600 mb-2" />
+                        <p className="text-[10px] font-bold text-red-600 tracking-widest uppercase mb-1">EGRESOS</p>
+                        <p className="text-lg font-bold text-red-700">${totalEgresos.toFixed(2)}</p>
                     </div>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <p className="text-[10px] font-bold text-orange-600 tracking-widest uppercase">CUENTAS POR COBRAR</p>
+                        <p className="text-xl font-bold text-orange-700">${totalCuentasPorCobrar.toFixed(2)}</p>
+                    </div>
+                    <HandCoins className="w-8 h-8 text-orange-200" />
                 </div>
 
                 {/* === INYECCIÓN DE LA CARTA DE PARAMETROS (FASE 16) === */}
@@ -118,6 +135,21 @@ export default async function AdminFinanzasPage() {
                         </div>
                     </div>
                     <div className="bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">
+                        <ArrowRight className="w-5 h-5" />
+                    </div>
+                </Link>
+
+                <Link href="/dashboard/admin/finanzas/egresos" className="flex items-center justify-between bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow group">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-red-50 text-red-600 p-3 rounded-xl">
+                            <TrendingDown className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="font-bold text-slate-800 text-lg">Control de Egresos</p>
+                            <p className="text-sm text-slate-500">Registro de facturas y gastos</p>
+                        </div>
+                    </div>
+                    <div className="bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 group-hover:text-red-600 group-hover:bg-red-50 transition-colors">
                         <ArrowRight className="w-5 h-5" />
                     </div>
                 </Link>

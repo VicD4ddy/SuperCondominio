@@ -1,6 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { Users, Building, Mail, Phone } from 'lucide-react'
+import { Users, Building, Mail, Phone, ArrowLeft, UserPlus, Home } from 'lucide-react'
+import VecinoActions from './VecinoActions'
+import NuevoVecinoForm from './NuevoVecinoForm'
+import InmuebleEditableInfo from './InmuebleEditableInfo'
+import NuevoInmuebleForm from './NuevoInmuebleForm'
 
 export default async function AdminVecinosPage() {
     const supabase = await createClient()
@@ -33,7 +37,6 @@ export default async function AdminVecinosPage() {
         .select(`
             id,
             identificador,
-            alicuota,
             propietarios:propietario_id (
                 id,
                 nombres,
@@ -45,14 +48,21 @@ export default async function AdminVecinosPage() {
         .eq('condominio_id', adminPerfil.condominio_id)
         .order('identificador', { ascending: true })
 
+    const inmueblesVancantes = inmuebles?.filter(i => !i.propietarios) || []
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
             {/* Header Rediseñado */}
             <div className="bg-[#1e3a8a] text-white px-6 pt-12 pb-6 rounded-b-3xl shadow-md sticky top-0 z-40">
                 <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Directorio Vecinal</h1>
-                        <p className="text-blue-100/80 text-sm mt-1">Gestión de Inmuebles y Propietarios</p>
+                    <div className="flex items-center gap-3">
+                        <Link href="/dashboard/admin" className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">Directorio Vecinal</h1>
+                            <p className="text-blue-100/80 text-sm mt-1">Gestión de Inmuebles y Propietarios</p>
+                        </div>
                     </div>
                     <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-sm">
                         <Users className="w-6 h-6 text-white" />
@@ -60,55 +70,69 @@ export default async function AdminVecinosPage() {
                 </div>
             </div>
 
-            <div className="px-5 mt-6 space-y-4">
-                <div className="bg-white border text-center border-slate-200 p-6 rounded-2xl shadow-sm mb-6">
-                    <div className="flex items-center justify-between mb-4">
+            <div className="px-5 mt-6 space-y-6">
+
+                {/* Dashboard de Alta Rápida */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <NuevoInmuebleForm />
+                    <NuevoVecinoForm inmueblesDisponibles={inmueblesVancantes} />
+                </div>
+
+                <div className="bg-white border text-center border-slate-200 p-6 rounded-2xl shadow-sm">
+                    <div className="flex items-center justify-between">
                         <div className="text-left">
                             <h2 className="text-xl font-bold text-slate-800">{inmuebles?.length || 0} Inmuebles</h2>
-                            <p className="text-sm text-slate-500 mt-1">Registrados en el sistema</p>
+                            <p className="text-sm text-slate-500 mt-1">Inventario total registrado</p>
                         </div>
-                        <Building className="w-8 h-8 text-blue-200" />
+                        <Home className="w-8 h-8 text-blue-200" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {(!inmuebles || inmuebles.length === 0) ? (
-                        <p className="text-center text-slate-500">No hay inmuebles registrados.</p>
+                        <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+                            <Building className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                            <p className="text-slate-500 font-medium">No hay inmuebles registrados todavía.</p>
+                            <p className="text-slate-400 text-sm">Utiliza el formulario superior para añadir el primero.</p>
+                        </div>
                     ) : (
                         inmuebles.map((inmueble) => {
                             const prop: any = Array.isArray(inmueble.propietarios) ? inmueble.propietarios[0] : inmueble.propietarios;
 
-                            return (<div key={inmueble.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                                <div className="flex justify-between items-center mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <Building className="w-5 h-5 text-[#1e3a8a]" />
-                                        <h3 className="font-bold text-slate-800 text-lg">{inmueble.identificador}</h3>
-                                    </div>
-                                    <span className="bg-slate-100 text-slate-600 font-bold px-2 py-1 rounded text-xs tracking-wider border border-slate-200">
-                                        Alícuota: {inmueble.alicuota}
-                                    </span>
-                                </div>
+                            return (
+                                <div key={inmueble.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:border-blue-200 transition-colors">
+                                    {/* Cabecera del Inmueble (Editable - Fase 31) */}
+                                    <InmuebleEditableInfo
+                                        inmuebleId={inmueble.id}
+                                        identificadorInicial={inmueble.identificador}
+                                    />
 
-                                {prop ? (
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                        <p className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-slate-400" />
-                                            {prop.nombres} {prop.apellidos}
-                                        </p>
-
-                                        {prop.telefono && (
-                                            <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                                <Phone className="w-3 h-3" /> {prop.telefono}
+                                    {prop ? (
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group relative mb-4">
+                                            <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
+                                                {prop.nombres} {prop.apellidos}
                                             </p>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 text-orange-600 text-sm font-medium flex items-center gap-2">
-                                        <Users className="w-4 h-4" />
-                                        Inmueble Desocupado / Sin registro
-                                    </div>
-                                )}
-                            </div>
+
+                                            {prop.telefono && (
+                                                <p className="text-xs text-slate-500 flex items-center gap-2">
+                                                    <Phone className="w-3 h-3" /> {prop.telefono}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 text-orange-600 text-[11px] font-bold uppercase tracking-wide flex items-center gap-2 mb-4">
+                                            <Users className="w-4 h-4 opacity-70" />
+                                            Inmueble Desocupado
+                                        </div>
+                                    )}
+
+                                    {/* Componente Cliente para Acciones (Fase 30) */}
+                                    <VecinoActions
+                                        inmuebleId={inmueble.id}
+                                        perfilId={prop?.id}
+                                        tienePropietario={!!prop}
+                                    />
+                                </div>
                             )
                         })
                     )}

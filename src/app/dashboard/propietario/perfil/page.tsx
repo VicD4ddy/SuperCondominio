@@ -44,28 +44,37 @@ export default async function PerfilPropietarioPage() {
                     </span>
                 </div>
 
-                {/* Carta de Residencia */}
-                {condominioData?.carta_residencia_url && (
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-slate-300 transition-colors">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-[#1e3a8a]/5 text-[#1e3a8a] rounded-xl flex items-center justify-center border border-[#1e3a8a]/10">
-                                <FileText className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-slate-900 text-[15px]">Carta de Residencia</h3>
-                                <p className="text-sm text-slate-500">Descargar documento PDF</p>
-                            </div>
+                {/* Carta de Residencia (Siempre Visible) */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-slate-300 transition-colors">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${condominioData?.carta_residencia_url
+                                ? 'bg-[#1e3a8a]/5 text-[#1e3a8a] border-[#1e3a8a]/10'
+                                : 'bg-slate-50 text-slate-300 border-slate-100'
+                            }`}>
+                            <FileText className="w-6 h-6" />
                         </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900 text-[15px]">Carta de Residencia</h3>
+                            <p className="text-sm text-slate-500">
+                                {condominioData?.carta_residencia_url ? 'Descargar documento PDF' : 'Documento no disponible todavía'}
+                            </p>
+                        </div>
+                    </div>
+                    {condominioData?.carta_residencia_url ? (
                         <a
                             href={condominioData.carta_residencia_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-3 bg-slate-50 text-slate-600 hover:text-[#1e3a8a] hover:bg-[#1e3a8a]/5 rounded-xl transition-all border border-slate-200"
+                            className="p-3 bg-[#1e3a8a] text-white hover:bg-blue-900 rounded-xl transition-all shadow-md"
                         >
                             <Download className="w-5 h-5" />
                         </a>
-                    </div>
-                )}
+                    ) : (
+                        <div className="p-3 bg-slate-50 text-slate-300 rounded-xl border border-slate-100 cursor-not-allowed" title="El administrador aún no ha subido el formato">
+                            <Download className="w-5 h-5" />
+                        </div>
+                    )}
+                </div>
 
                 {/* Opciones */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">

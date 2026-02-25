@@ -27,7 +27,7 @@ export default function ExcelActions() {
             // 1. Título principal
             sheet.mergeCells('A1', 'O1');
             const titleRow = sheet.getRow(1);
-            titleRow.value = `REGISTRO ANUAL DE COBROS - ${result.condominio || 'CONDOMINIO'}`;
+            titleRow.getCell(1).value = `REGISTRO ANUAL DE COBROS - ${result.condominio || 'CONDOMINIO'}`;
             titleRow.font = { name: 'Inter', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
             titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
             titleRow.height = 40;
@@ -40,7 +40,7 @@ export default function ExcelActions() {
             // 2. Subtítulo Año
             sheet.mergeCells('A2', 'O2');
             const subRow = sheet.getRow(2);
-            subRow.value = `Año Fiscal: ${new Date().getFullYear()}`;
+            subRow.getCell(1).value = `Año Fiscal: ${new Date().getFullYear()}`;
             subRow.font = { size: 12, italic: true };
             subRow.alignment = { horizontal: 'center' };
 
@@ -116,7 +116,7 @@ export default function ExcelActions() {
 
             // Inmovilizar encabezados
             sheet.views = [
-                { state: 'frozen', xSplit: 0, ySplit: 4, activePane: 'bottomRight', selRange: 'A5' }
+                { state: 'frozen', xSplit: 0, ySplit: 4 }
             ];
 
             // Generar y descargar
@@ -206,8 +206,8 @@ export default function ExcelActions() {
 
             {status && (
                 <div className={`flex items-center gap-3 px-4 py-4 rounded-2xl border text-sm font-medium animate-in fade-in slide-in-from-top-2 shadow-sm ${status.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                        : 'bg-red-50 border-red-100 text-red-800'
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                    : 'bg-red-50 border-red-100 text-red-800'
                     }`}>
                     {status.type === 'success' ? (
                         <div className="bg-emerald-500 text-white p-1 rounded-full shadow-sm">

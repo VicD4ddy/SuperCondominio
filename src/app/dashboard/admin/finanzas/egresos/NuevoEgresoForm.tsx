@@ -1,27 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, X, Loader2, DollarSign, Calendar, FileText, LayoutGrid } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Plus, X, Loader2, DollarSign, Calendar, FileText, LayoutGrid, Camera, Image as ImageIcon } from 'lucide-react'
 import { crearEgresoAction } from './actions'
+import { compressImage } from '@/utils/imageCompression'
+import { toast } from 'sonner'
 
 export default function NuevoEgresoForm() {
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            // Mostrar preview inmediato
+            setPreviewUrl(URL.createObjectURL(file))
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setIsLoading(true)
 
-        const formData = new FormData(e.currentTarget)
-        const res = await crearEgresoAction(formData)
+        try {
+            const formData = new FormData(e.currentTarget)
+            const file = fileInputRef.current?.files?.[0]
 
-        if (res.success) {
-            setIsOpen(false)
-            // La actualización se maneja por revalidatePath en el action
-        } else {
-            alert(res.error)
+            if (file) {
+                toast.info('Comprimiendo imagen...')
+                const compressedBlob = await compressImage(file, 1000, 0.6)
+                formData.set('imagen', compressedBlob, 'recibo.jpg')
+            }
+
+            const res = await crearEgresoAction(formData)
+
+            if (res.success) {
+                toast.success('Gasto registrado exitosamente')
+                setIsOpen(false)
+                setPreviewUrl(null)
+            } else {
+                toast.error(res.error)
+            }
+        } catch (err) {
+            toast.error('Error al procesar el registro')
+            console.error(err)
+        } finally {
+            setIsLoading(false)
         }
-        setIsLoading(false)
     }
 
     if (!isOpen) {
@@ -39,7 +66,10 @@ export default function NuevoEgresoForm() {
     return (
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl relative animate-in fade-in slide-in-from-bottom-4 duration-300">
             <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                    setIsOpen(false)
+                    setPreviewUrl(null)
+                }}
                 className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
             >
                 <X className="w-5 h-5" />
@@ -115,10 +145,42 @@ export default function NuevoEgresoForm() {
                     </div>
                 </div>
 
+                {/* --- SECCIÓN Recibo (Foto) --- */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
+                        <Camera className="w-4 h-4" /> Comprobante o Recibo (Opcional)
+                    </label>
+
+                    <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="cursor-pointer border-2 border-dashed border-slate-200 rounded-2xl h-32 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-all group overflow-hidden relative"
+                    >
+                        {previewUrl ? (
+                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                            <>
+                                <ImageIcon className="w-8 h-8 text-slate-300 group-hover:text-blue-400 transition-colors mb-2" />
+                                <p className="text-xs text-slate-400 font-medium group-hover:text-slate-600 transition-colors">Toque para subir foto del recibo</p>
+                            </>
+                        )}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            name="imagen_dummy" // Lo manejamos manual por compresión
+                        />
+                    </div>
+                </div>
+
                 <div className="pt-4 flex flex-col sm:flex-row gap-3">
                     <button
                         type="button"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            setIsOpen(false)
+                            setPreviewUrl(null)
+                        }}
                         className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
                     >
                         Cancelar

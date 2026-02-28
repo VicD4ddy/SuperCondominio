@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import NotificacionesWidget from '@/components/NotificacionesWidget'
 import GastosTransparenciaWidget from '@/components/GastosTransparenciaWidget'
+import TutorialResidentWidget from '@/components/TutorialResidentWidget'
 
 export default async function PropietarioDashboardPage() {
     const supabase = await createClient()
@@ -82,36 +83,40 @@ export default async function PropietarioDashboardPage() {
 
     return (
         <div className="relative">
-            {/* Bondo Azul Curvo */}
-            <div className="bg-[#1e3a8a] text-white pt-10 pb-24 px-6 rounded-b-[40px] relative z-0">
-                <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-                            <UserIcon className="w-6 h-6 text-white" />
+            {/* Header - En la parte superior de la página (scrollable) */}
+            <div className="relative z-50">
+                <div className="bg-[#1e3a8a] text-white pt-10 pb-12 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
+                                    <UserIcon className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-blue-100 font-medium">¡Hola, {perfil.nombres}! 👋</p>
+                                    <h1 className="text-xl font-bold tracking-tight">{nombreCondominio}</h1>
+                                </div>
+                            </div>
+                            <NotificacionesWidget count={unreadCount || 0} href="/dashboard/propietario/notificaciones" theme="dark" />
                         </div>
-                        <div>
-                            <p className="text-sm text-blue-100 font-medium">¡Hola, {perfil.nombres}! 👋</p>
-                            <h1 className="text-xl font-bold tracking-tight">{nombreCondominio}</h1>
-                        </div>
-                    </div>
-                    <NotificacionesWidget count={unreadCount || 0} href="/dashboard/propietario/notificaciones" theme="dark" />
-                </div>
 
-                {perfil.estado_solvencia ? (
-                    <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/50 text-emerald-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
-                        <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
-                        ESTADO: SOLVENTE
+                        {perfil.estado_solvencia ? (
+                            <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/50 text-emerald-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
+                                <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
+                                ESTADO: SOLVENTE
+                            </div>
+                        ) : (
+                            <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-500/50 text-red-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                ESTADO: DEUDA
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-500/50 text-red-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
-                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                        ESTADO: MOROSO
-                    </div>
-                )}
+                </div>
             </div>
 
-            {/* Contenido Principal Sobrepuesto */}
-            <div className="px-5 -mt-16 relative z-10 space-y-4">
+            {/* Contenido Principal */}
+            <div className="px-5 mt-4 relative z-10 space-y-4">
 
                 {/* Resumen Financiero Card */}
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -151,6 +156,9 @@ export default async function PropietarioDashboardPage() {
                     <Banknote className="w-6 h-6" />
                     Reportar Pago Móvil
                 </Link>
+
+                {/* Tutorial Rápido */}
+                <TutorialResidentWidget />
 
                 {/* Gastos: Transparencia */}
                 <GastosTransparenciaWidget egresos={egresos || []} />
@@ -201,7 +209,7 @@ export default async function PropietarioDashboardPage() {
                 </div>
 
             </div>
-        </div>
+        </div >
     )
 }
 

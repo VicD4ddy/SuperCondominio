@@ -5,22 +5,23 @@ import CrearAnuncioForm from './CrearAnuncioForm'
 import { DeleteButton, PinButton } from './AnuncioActions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export default async function AdminAnunciosPage() {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) return null
+    if (!user) {
+        return (
+            <div className="p-5 text-center text-slate-500">
+                Sesión no iniciada. <Link href="/login" className="text-blue-600 underline">Ir al Login</Link>
+            </div>
+        )
+    }
 
-    // Validar Admin y Condominio
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('auth_user_id', user.id)
-        .eq('rol', 'admin')
-        .single()
-
-    if (!adminPerfil) return null
+    if (!adminPerfil) {
+        return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
+    }
 
     // Traer todos los anuncios (Los fijados primero, y luego por fecha descendente)
     const { data: anuncios } = await supabase
@@ -72,8 +73,15 @@ export default async function AdminAnunciosPage() {
                     </h2>
 
                     {anuncios?.length === 0 ? (
-                        <div className="text-center py-12 bg-white rounded-3xl border border-slate-200 border-dashed">
-                            <p className="text-slate-500 text-sm font-medium">El tablero está vacío. Anuncia algo emocionante a tus vecinos.</p>
+                        <div className="bg-white p-16 rounded-[40px] border border-dashed border-slate-200 text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-700 shadow-sm">
+                            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center relative">
+                                <Megaphone className="w-10 h-10 text-blue-200" />
+                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-400 rounded-full border-4 border-white animate-pulse" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold text-slate-800">Tablero sin noticias</h3>
+                                <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium">Anuncia mantenimientos, eventos o normativas para mantener a tu comunidad informada y conectada.</p>
+                            </div>
                         </div>
                     ) : (
                         anuncios?.map((anuncio: any) => (

@@ -4,11 +4,11 @@ import { Users, Building, Mail, Phone, ArrowLeft, UserPlus, Home } from 'lucide-
 import VecinoActions from './VecinoActions'
 import InmuebleEditableInfo from './InmuebleEditableInfo'
 import RegistroMasivoVecinos from './RegistroMasivoVecinos'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export default async function AdminVecinosPage() {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
         return (
@@ -17,14 +17,6 @@ export default async function AdminVecinosPage() {
             </div>
         )
     }
-
-    // Obtener condominio del Admin
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('auth_user_id', user.id)
-        .eq('rol', 'admin')
-        .single()
 
     if (!adminPerfil) {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
@@ -41,6 +33,7 @@ export default async function AdminVecinosPage() {
                 nombres,
                 apellidos,
                 telefono,
+                email,
                 auth_user_id 
             )
         `)
@@ -51,19 +44,19 @@ export default async function AdminVecinosPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
-            {/* Header Rediseñado */}
-            <div className="bg-[#1e3a8a] text-white px-6 pt-12 pb-6 rounded-b-3xl shadow-md sticky top-0 z-40">
-                <div className="flex justify-between items-center">
+            {/* Header Rediseñado y Sticky */}
+            <div className="sticky top-0 z-50 bg-[#1e3a8a] text-white px-6 pt-12 pb-6 rounded-b-[2rem] shadow-xl border-b border-white/10 transition-shadow duration-300">
+                <div className="flex justify-between items-center max-w-7xl mx-auto">
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard/admin" className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <Link href="/dashboard/admin" className="p-2 hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/20">
                             <ArrowLeft className="w-5 h-5 text-white" />
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Directorio Vecinal</h1>
-                            <p className="text-blue-100/80 text-sm mt-1">Gestión de Inmuebles y Propietarios</p>
+                            <h1 className="text-2xl font-black tracking-tighter leading-none">Directorio Vecinal</h1>
+                            <p className="text-blue-100/60 text-[10px] font-black uppercase tracking-widest mt-1.5">Gestión de Inmuebles</p>
                         </div>
                     </div>
-                    <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-sm">
+                    <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
                         <Users className="w-6 h-6 text-white" />
                     </div>
                 </div>
@@ -111,6 +104,11 @@ export default async function AdminVecinosPage() {
                                             {prop.telefono && (
                                                 <p className="text-xs text-slate-500 flex items-center gap-2">
                                                     <Phone className="w-3 h-3" /> {prop.telefono}
+                                                </p>
+                                            )}
+                                            {prop.email && (
+                                                <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                                    <Mail className="w-3 h-3" /> {prop.email}
                                                 </p>
                                             )}
                                         </div>

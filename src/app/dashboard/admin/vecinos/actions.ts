@@ -2,28 +2,20 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function crearVecinoAction(formData: FormData) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // 1. Validar Admin
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { success: false, error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { success: false, error: 'Perfil de admin no encontrado' }
+        if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
         // 2. Extraer datos
         const cedula = formData.get('cedula') as string
         const nombres = formData.get('nombres') as string
         const apellidos = formData.get('apellidos') as string
+        const email = formData.get('email') as string
         const telefono = formData.get('telefono') as string
         const inmuebleId = formData.get('inmueble_id') as string // Opcional al crear
 
@@ -52,6 +44,7 @@ export async function crearVecinoAction(formData: FormData) {
                 nombres,
                 apellidos,
                 cedula,
+                email,
                 telefono,
                 auth_user_id: sharedAuthId
             })
@@ -157,20 +150,10 @@ export async function actualizarInmuebleAction(inmuebleId: string, data: { ident
 
 export async function crearInmuebleAction(formData: FormData) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // 1. Validar Admin
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { success: false, error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { success: false, error: 'Perfil de admin no encontrado' }
+        if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
         // 2. Extraer datos
         const identificador = formData.get('identificador') as string
@@ -203,20 +186,10 @@ export async function crearInmuebleAction(formData: FormData) {
 
 export async function importarInmueblesMasivoAction(items: any[]) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // 1. Validar Admin
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { success: false, error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { success: false, error: 'Perfil de admin no encontrado' }
+        if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
         const condominioId = adminPerfil.condominio_id
 
@@ -226,7 +199,7 @@ export async function importarInmueblesMasivoAction(items: any[]) {
 
         for (const item of items) {
             try {
-                const { inmueble, nombre, apellido, cedula, telefono } = item
+                const { inmueble, nombre, apellido, cedula, telefono, email } = item
 
                 if (!inmueble) continue
 
@@ -276,6 +249,7 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                                 nombres: nombre,
                                 apellidos: apellido,
                                 cedula,
+                                email,
                                 telefono
                             })
                             .select()
@@ -313,19 +287,10 @@ export async function importarInmueblesMasivoAction(items: any[]) {
 
 export async function getInmueblesDatosAction() {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id, condominios(nombre)')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         const { data: inmuebles } = await supabase
             .from('inmuebles')
@@ -335,6 +300,7 @@ export async function getInmueblesDatosAction() {
                     nombres,
                     apellidos,
                     cedula,
+                    email,
                     telefono
                 )
             `)

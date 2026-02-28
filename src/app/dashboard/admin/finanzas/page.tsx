@@ -5,11 +5,11 @@ import ParametrosFinancierosCard from './ParametrosFinancierosCard'
 import { getReporteConsolidadosAction } from './actions'
 import ReporteCuentasPorCobrar from '@/components/ReporteCuentasPorCobrar'
 import ExcelActions from '@/components/ExcelActions'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export default async function AdminFinanzasPage() {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
         return (
@@ -19,20 +19,11 @@ export default async function AdminFinanzasPage() {
         )
     }
 
-    // Obtener condominio del Admin con los atributos financieros base
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select(`
-            condominio_id,
-            condominios ( monto_mensual_usd, dia_cobro )
-        `)
-        .eq('auth_user_id', user.id)
-        .eq('rol', 'admin')
-        .single()
-
     if (!adminPerfil) {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
     }
+
+    // El adminPerfil retornado por getAdminProfile ya incluye la data del condominio.
 
     // Obtener Tasa BCV Oficial
     let tasaBcv = 36.50;

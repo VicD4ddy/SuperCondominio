@@ -3,24 +3,19 @@ import Link from 'next/link'
 import { ChevronLeft, Receipt, TrendingDown, ArrowLeft } from 'lucide-react'
 import EgresosList from './EgresosList'
 import NuevoEgresoForm from './NuevoEgresoForm'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export default async function AdminEgresosPage() {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
         return <div className="p-5 text-center">No autorizado.</div>
     }
 
-    // Obtener condominio del Admin
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('auth_user_id', user.id)
-        .eq('rol', 'admin')
-        .single()
-
-    if (!adminPerfil) return <div className="p-5">Perfil no encontrado.</div>
+    if (!adminPerfil) {
+        return <div className="p-5">Perfil no encontrado.</div>
+    }
 
     // Obtener egresos del mes actual (o todos por ahora para simplificar el MVP)
     const { data: egresos } = await supabase

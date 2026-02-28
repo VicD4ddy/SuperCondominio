@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import NotificacionesClientList from '@/components/NotificacionesClientList'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export const metadata = {
     title: 'Notificaciones Administrativas | SUPERcondominio',
@@ -10,21 +11,10 @@ export const metadata = {
 }
 
 export default async function AdminNotificacionesPage() {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-        redirect('/login')
-    }
-
-    // Obtener condominio del admin
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single()
-
-    if (!adminPerfil || adminPerfil.rol !== 'admin') {
+    if (!user || !adminPerfil) {
         redirect('/login')
     }
 

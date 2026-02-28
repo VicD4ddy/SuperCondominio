@@ -42,8 +42,8 @@ export default function AdminBottomNav() {
     ]
 
     return (
-        <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 px-6 py-3 pb-safe z-50">
-            <div className="max-w-md mx-auto flex justify-between items-center text-xs font-medium">
+        <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 px-2 sm:px-6 py-3 pb-safe z-50">
+            <div className="max-w-md mx-auto flex justify-between items-center text-[10px] sm:text-xs font-bold uppercase tracking-tight">
                 {navItems.map((item) => {
                     const Icon = item.icon
                     const isSelected = item.isActive
@@ -52,9 +52,11 @@ export default function AdminBottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center gap-1 transition-colors ${isSelected ? 'text-[#1e3a8a]' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex flex-col items-center gap-1 transition-all flex-1 py-1 rounded-xl ${isSelected ? 'text-[#1e3a8a]' : 'text-slate-400 hover:text-slate-600'}`}
                         >
-                            <Icon className={`w-6 h-6 ${isSelected ? 'fill-[#1e3a8a] text-[#1e3a8a]' : ''}`} />
+                            <div className={`p-2 rounded-2xl transition-all ${isSelected ? 'bg-blue-50 scale-110 shadow-sm' : ''}`}>
+                                <Icon className={`w-6 h-6 ${isSelected ? 'fill-[#1e3a8a] text-[#1e3a8a]' : ''}`} />
+                            </div>
                             <span>{item.name}</span>
                         </Link>
                     )

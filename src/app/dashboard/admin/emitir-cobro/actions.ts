@@ -3,23 +3,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function emitirCobroMasivoAction(formData: FormData) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // Obtener usuario admin autenticado
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil de administrador no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         const condominioId = adminPerfil.condominio_id
 

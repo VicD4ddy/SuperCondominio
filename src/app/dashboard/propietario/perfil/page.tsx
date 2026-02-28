@@ -48,8 +48,8 @@ export default async function PerfilPropietarioPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-slate-300 transition-colors">
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${condominioData?.carta_residencia_url
-                                ? 'bg-[#1e3a8a]/5 text-[#1e3a8a] border-[#1e3a8a]/10'
-                                : 'bg-slate-50 text-slate-300 border-slate-100'
+                            ? 'bg-[#1e3a8a]/5 text-[#1e3a8a] border-[#1e3a8a]/10'
+                            : 'bg-slate-50 text-slate-300 border-slate-100'
                             }`}>
                             <FileText className="w-6 h-6" />
                         </div>
@@ -77,35 +77,44 @@ export default async function PerfilPropietarioPage() {
                 </div>
 
                 {/* Opciones */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                    <Link href="/dashboard/propietario/pagos/nuevo" className="px-4 py-4 border-b border-slate-100 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                                <CreditCard className="w-5 h-5" />
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <Link href="/dashboard/propietario/perfil/metodos-pago" className="px-5 py-5 border-b border-slate-100 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full group">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-100 transition-colors">
+                                <CreditCard className="w-6 h-6" />
                             </div>
-                            <span className="font-medium text-slate-700">Métodos de Pago</span>
+                            <div>
+                                <span className="font-bold text-slate-800 text-[15px]">Métodos de Pago</span>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Cuentas bancarias</p>
+                            </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-all" />
                     </Link>
 
-                    <Link href="/dashboard/propietario/perfil" className="px-4 py-4 border-b border-slate-100 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
-                                <Shield className="w-5 h-5" />
+                    <Link href="/dashboard/propietario/perfil/seguridad" className="px-5 py-5 border-b border-slate-100 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full group">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-slate-50 text-slate-600 rounded-xl group-hover:bg-slate-100 transition-colors">
+                                <Shield className="w-6 h-6" />
                             </div>
-                            <span className="font-medium text-slate-700">Privacidad y Seguridad</span>
+                            <div>
+                                <span className="font-bold text-slate-800 text-[15px]">Privacidad y Seguridad</span>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Gestión de tus datos</p>
+                            </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-800 transition-all" />
                     </Link>
 
-                    <Link href="/dashboard/propietario/tickets" className="px-4 py-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-                                <HelpCircle className="w-5 h-5" />
+                    <Link href="/dashboard/propietario/perfil/ayuda" className="px-5 py-5 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors w-full group">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
+                                <HelpCircle className="w-6 h-6" />
                             </div>
-                            <span className="font-medium text-slate-700">Soporte y Ayuda</span>
+                            <div>
+                                <span className="font-bold text-slate-800 text-[15px]">Soporte y Ayuda</span>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Contacto administrativo</p>
+                            </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-orange-500 transition-all" />
                     </Link>
                 </div>
 

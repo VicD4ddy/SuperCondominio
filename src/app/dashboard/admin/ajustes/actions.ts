@@ -2,23 +2,14 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function guardarAnuncioAction(formData: FormData) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // 1. Validar Administrador y Obtener Condominio
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil de admin no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil de admin no encontrado' }
 
         const nuevoAnuncio = formData.get('anuncio') as string
         const textoLimpio = nuevoAnuncio?.trim() || null // Si envía vacío, limpiamos el tablón
@@ -50,19 +41,10 @@ export async function guardarAnuncioAction(formData: FormData) {
 
 export async function guardarCuentasAction(cuentasJson: any[]) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         console.log('DEBUG: Guardando cuentas para condominio', adminPerfil.condominio_id)
         console.log('DEBUG: JSON:', JSON.stringify(cuentasJson))
@@ -94,20 +76,10 @@ export async function guardarCuentasAction(cuentasJson: any[]) {
 
 export async function subirCartaResidenciaAction(formData: FormData) {
     try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
         const supabase = await createClient()
 
-        // 1. Validar Admin
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { success: false, error: 'No autorizado' }
-
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('id, condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { success: false, error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
         // 2. Extraer archivo
         const archivo = formData.get('documento') as File

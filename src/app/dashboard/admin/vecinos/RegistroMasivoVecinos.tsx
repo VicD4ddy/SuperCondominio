@@ -6,10 +6,10 @@ import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { getInmueblesDatosAction, importarInmueblesMasivoAction, crearInmuebleAction, crearVecinoAction } from './actions'
+import { toast } from 'sonner'
 
 export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmueblesVacantes: any[] }) {
     const [loading, setLoading] = useState(false)
-    const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
     const [view, setView] = useState<'options' | 'manual' | 'excel'>('options')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -18,7 +18,6 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
 
     const handleExport = async () => {
         setLoading(true)
-        setStatus(null)
         try {
             const result = await getInmueblesDatosAction();
             if (result.error) throw new Error(result.error);
@@ -35,7 +34,7 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
             titleRow.height = 40;
             titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
 
-            const headers = ['Inmueble', 'Nombre', 'Apellido', 'Cedula', 'Telefono'];
+            const headers = ['Inmueble', 'Nombre', 'Apellido', 'Cedula', 'Email', 'Telefono'];
             const headerRow = sheet.getRow(3);
             headerRow.values = headers;
             headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -51,6 +50,7 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
                         prop?.nombres || '',
                         prop?.apellidos || '',
                         prop?.cedula || '',
+                        prop?.email || '',
                         prop?.telefono || ''
                     ];
                     const row = sheet.addRow(rowData);
@@ -64,15 +64,16 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
             sheet.getColumn(2).width = 25; // Nombre
             sheet.getColumn(3).width = 25; // Apellido
             sheet.getColumn(4).width = 18; // Cedula
-            sheet.getColumn(5).width = 20; // Telefono
+            sheet.getColumn(5).width = 25; // Email
+            sheet.getColumn(6).width = 20; // Telefono
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             saveAs(blob, `Directorio_Vecinos_${new Date().toLocaleDateString()}.xlsx`);
 
-            setStatus({ type: 'success', message: 'Formato de Directorio exportado.' });
+            toast.success('Formato de Directorio exportado.')
         } catch (err: any) {
-            setStatus({ type: 'error', message: err.message || 'Error al exportar.' });
+            toast.error(err.message || 'Error al exportar.')
         } finally {
             setLoading(false)
         }
@@ -83,7 +84,6 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
         if (!file) return;
 
         setLoading(true)
-        setStatus(null)
         const reader = new FileReader();
 
         reader.onload = async (evt) => {
@@ -101,16 +101,17 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
                     nombre: row.Nombre || row.nombre,
                     apellido: row.Apellido || row.apellido,
                     cedula: row.Cedula || row.cedula || row.Cédula,
+                    email: row.Email || row.email || row.Correo,
                     telefono: row.Telefono || row.telefono || row.Teléfono
                 }));
 
                 const result = await importarInmueblesMasivoAction(normalizedData);
                 if (!result.success) throw new Error(result.error);
 
-                setStatus({ type: 'success', message: `Importación exitosa: ${result.count} registros procesados.` });
+                toast.success(`Importación exitosa: ${result.count} registros procesados.`)
                 setView('options');
             } catch (err: any) {
-                setStatus({ type: 'error', message: err.message || 'Error al importar.' });
+                toast.error(err.message || 'Error al importar.')
             } finally {
                 setLoading(false)
                 if (fileInputRef.current) fileInputRef.current.value = '';
@@ -122,7 +123,6 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
     const handleManualSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setManualLoading(true);
-        setStatus(null);
 
         const formData = new FormData(e.currentTarget);
         const identificador = formData.get('identificador') as string;
@@ -140,14 +140,14 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
                 if (!resVec.success) throw new Error(resVec.error);
             }
 
-            setStatus({ type: 'success', message: 'Registro individual completado con éxito.' });
+            toast.success('Registro individual completado con éxito.')
             setView('options');
         } catch (err: any) {
-            setStatus({ type: 'error', message: err.message || 'Error en el registro manual.' });
+            toast.error(err.message || 'Error en el registro manual.')
         } finally {
             setManualLoading(false);
         }
-    }
+    };
 
     return (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-8">
@@ -287,6 +287,15 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
                                         />
                                     </div>
                                     <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase px-1">Email</label>
+                                        <input
+                                            name="email"
+                                            type="email"
+                                            placeholder="Ej: pedro@correo.com"
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-slate-500 uppercase px-1">Teléfono</label>
                                         <input
                                             name="telefono"
@@ -319,15 +328,6 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
                     </form>
                 )}
 
-                {status && (
-                    <div className={`mt-6 flex items-center gap-3 px-4 py-4 rounded-2xl border text-sm font-medium animate-in fade-in slide-in-from-top-2 shadow-sm ${status.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                        : 'bg-red-50 border-red-100 text-red-800'
-                        }`}>
-                        {status.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <AlertCircle className="w-5 h-5 text-red-500" />}
-                        {status.message}
-                    </div>
-                )}
             </div>
         </div>
     )

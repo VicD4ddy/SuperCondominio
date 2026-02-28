@@ -1,19 +1,20 @@
-import { Search, MessageSquare, Clock, ChevronDown, CheckCircle2, ChevronRight, Receipt, FileText, Megaphone, Bell, TrendingUp, Building, Calendar, Check, X, Eye, Plus, AlertCircle, Wallet, Download } from 'lucide-react'
+import { Search, MessageSquare, Clock, ChevronDown, CheckCircle2, ChevronRight, Receipt, FileText, Megaphone, Bell, TrendingUp, TrendingDown, Building, Calendar, Check, X, Eye, Plus, AlertCircle, Wallet, Download } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import CaptureViewer from './CaptureViewer'
 import NotificacionesWidget from '@/components/NotificacionesWidget'
+import RejectionForm from './RejectionForm'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export default async function AdminDashboardPage({
     searchParams
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+    const { user, profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
         return (
@@ -23,24 +24,13 @@ export default async function AdminDashboardPage({
         )
     }
 
-    const resolvedParams = await searchParams
-    const successMsg = resolvedParams?.success === 'cobros_emitidos'
-    const verPagoId = resolvedParams?.ver_pago;
-
-    // Obtener condominio del Admin
-    const { data: adminPerfil } = await supabase
-        .from('perfiles')
-        .select(`
-            nombres, apellidos, condominio_id,
-            condominios ( nombre, anuncio_tablon )
-        `)
-        .eq('auth_user_id', user.id)
-        .eq('rol', 'admin')
-        .single()
-
     if (!adminPerfil) {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
     }
+
+    const resolvedParams = await searchParams
+    const successMsg = resolvedParams?.success === 'cobros_emitidos'
+    const verPagoId = resolvedParams?.ver_pago;
 
     const condominioData = adminPerfil?.condominios as any;
     const anuncioTablon = condominioData?.anuncio_tablon;
@@ -516,6 +506,18 @@ export default async function AdminDashboardPage({
                         </div>
                     </Link>
 
+                    <Link href="/dashboard/admin/finanzas/egresos" className="flex items-center justify-between bg-red-50 border border-red-200 p-4 rounded-xl mt-4 hover:bg-red-100 transition-colors">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-red-500 text-white p-2.5 rounded-xl shadow-sm">
+                                <TrendingDown className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-800 tracking-tight">Reportar Gastos (Transparencia)</p>
+                                <p className="text-xs text-slate-500">Registra egresos para los residentes</p>
+                            </div>
+                        </div>
+                    </Link>
+
 
                     <div className="flex items-center gap-2 mt-6 mb-2">
                         <AlertCircle className="w-4 h-4 text-orange-500" />
@@ -570,15 +572,9 @@ export default async function AdminDashboardPage({
                                         </div>
 
                                         <div className="flex gap-3">
-                                            <form className="flex-1" action={async () => {
-                                                "use server"
-                                                const { rechazarPagoAction } = await import('./actions')
-                                                await rechazarPagoAction(pago.id)
-                                            }}>
-                                                <button type="submit" className="w-full flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-500 rounded-xl py-2.5 font-semibold text-sm transition-all focus:outline-none focus:ring-4 focus:ring-red-100">
-                                                    <X className="w-4 h-4" /> Rechazar
-                                                </button>
-                                            </form>
+                                            <div className="flex-1">
+                                                <RejectionForm pagoId={pago.id} />
+                                            </div>
                                             <form className="flex-1" action={async () => {
                                                 "use server"
                                                 const { aprobarPagoAction } = await import('./actions')

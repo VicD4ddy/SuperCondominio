@@ -2,22 +2,16 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function guardarParametrosFinancierosAction(montoMensual: number, diaCobro: number) {
-    const supabase = await createClient()
-
     try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
+        const { user, profile: adminPerfil } = await getAdminProfile()
+        const supabase = await createClient()
 
-        // Extraer condominio del admin
-        const { data: perfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .single()
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
-        if (!perfil?.condominio_id) return { error: 'Condominio no encontrado' }
+        const condominioId = adminPerfil.condominio_id
 
         // Validar data
         if (montoMensual < 0) return { error: 'El monto no puede ser negativo' }
@@ -30,7 +24,7 @@ export async function guardarParametrosFinancierosAction(montoMensual: number, d
                 monto_mensual_usd: montoMensual,
                 dia_cobro: diaCobro
             })
-            .eq('id', perfil.condominio_id)
+            .eq('id', condominioId)
 
         if (error) {
             console.error('Error supabase guardarParametrosFinancierosAction:', error)
@@ -48,20 +42,11 @@ export async function guardarParametrosFinancierosAction(montoMensual: number, d
 }
 
 export async function getReporteConsolidadosAction() {
-    const supabase = await createClient()
-
     try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
+        const { user, profile: adminPerfil } = await getAdminProfile()
+        const supabase = await createClient()
 
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .eq('rol', 'admin')
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         const condominioId = adminPerfil.condominio_id
 
@@ -140,20 +125,13 @@ export async function getReporteConsolidadosAction() {
 }
 
 export async function getReporteAnualAction(year?: number) {
-    const supabase = await createClient()
     const targetYear = year || new Date().getFullYear()
 
     try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
+        const { user, profile: adminPerfil } = await getAdminProfile()
+        const supabase = await createClient()
 
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         // 0. Obtener nombre del condominio
         const { data: condo } = await supabase
@@ -222,19 +200,11 @@ export async function getReporteAnualAction(year?: number) {
 }
 
 export async function importRecibosExcelAction(data: any[]) {
-    const supabase = await createClient()
-
     try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return { error: 'No autorizado' }
+        const { user, profile: adminPerfil } = await getAdminProfile()
+        const supabase = await createClient()
 
-        const { data: adminPerfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('auth_user_id', user.id)
-            .single()
-
-        if (!adminPerfil) return { error: 'Perfil no encontrado' }
+        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         // Mapeo simple: Identificador -> ID del inmueble
         const { data: inmuebles } = await supabase

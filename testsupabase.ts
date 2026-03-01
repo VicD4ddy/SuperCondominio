@@ -7,14 +7,21 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function run() {
-    console.log("Adding condominio_id to logs_sistema...")
+    console.log("Checking pagos_reportados structure to find property reference...")
 
-    // We can't easily alter table via anon key, so we'll just check if it exists via RPC or try a basic insert
+    // We need to see an actual row to know what fields we have
     const { data: cols, error: e1 } = await supabase
-        .from('logs_sistema')
-        .select('*')
+        .from('pagos_reportados')
+        .select(`
+            *
+        `)
+        // remove limits/RLS by just pulling any row that is public
         .limit(1)
 
-    console.log("Current logs cols:", Object.keys(cols?.[0] || {}))
+    if (e1) {
+        console.error('ERROR rows:', JSON.stringify(e1, null, 2))
+    } else {
+        console.log("ROW DATA:", JSON.stringify(cols, null, 2))
+    }
 }
 run()

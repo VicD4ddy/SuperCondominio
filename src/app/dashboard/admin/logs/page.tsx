@@ -18,13 +18,16 @@ export default async function AdminLogsPage() {
         .from('pagos_reportados')
         .select(`
             id,
-            monto,
-            moneda,
+            monto_bs,
+            monto_equivalente_usd,
             estado,
             referencia,
             updated_at,
-            inmuebles (identificador),
-            perfiles (nombres, apellidos)
+            perfil:perfil_id (
+                nombres, 
+                apellidos,
+                inmuebles (identificador)
+            )
         `)
         .eq('condominio_id', adminPerfil.condominio_id)
         .in('estado', ['verificado', 'rechazado'])
@@ -34,15 +37,18 @@ export default async function AdminLogsPage() {
     // Mapear pagos al formato de bitácora
     const logs = (pagos || []).map(pago => {
         const esVerificado = pago.estado === 'verificado'
-        const inmueble = Array.isArray(pago.inmuebles) ? pago.inmuebles[0] : pago.inmuebles
-        const perfil = Array.isArray(pago.perfiles) ? pago.perfiles[0] : pago.perfiles
+        const perfilObj: any = Array.isArray(pago.perfil) ? pago.perfil[0] : pago.perfil
+        const inmueblesArr = perfilObj?.inmuebles || []
+        const inmuebleMuestra = Array.isArray(inmueblesArr) && inmueblesArr.length > 0
+            ? inmueblesArr[0].identificador
+            : 'No vinculado'
 
         return {
             id: pago.id,
             evento: esVerificado ? 'Pago Verificado' : 'Pago Anulado',
-            detalles: `Cobro de ${pago.monto} ${pago.moneda} (Ref: ${pago.referencia || 'N/A'}) referenciado al inmueble ${inmueble?.identificador || 'N/A'}.`,
+            detalles: `Cobro reportado procesado por ${pago.monto_bs} Bs. (Ref: ${pago.referencia || 'N/A'}) - Inmueble: ${inmuebleMuestra}.`,
             created_at: pago.updated_at,
-            perfil: perfil
+            perfil: perfilObj
         }
     })
 

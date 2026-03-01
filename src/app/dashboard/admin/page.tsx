@@ -32,7 +32,11 @@ export default async function AdminDashboardPage({
     const successMsg = resolvedParams?.success === 'cobros_emitidos'
     const verPagoId = resolvedParams?.ver_pago;
 
-    const condominioData = adminPerfil?.condominios as any;
+    const condominioData = adminPerfil?.condominios as {
+        anuncio_tablon?: string | null
+        cuentas_bancarias?: unknown
+        nombre?: string | null
+    } | null
     const anuncioTablon = condominioData?.anuncio_tablon;
 
     // Contar notificaciones no leídas para Admin
@@ -81,6 +85,120 @@ export default async function AdminDashboardPage({
             }
         });
     }
+
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const monthStartStr = monthStart.toISOString().slice(0, 10)
+    const nextMonthStartStr = nextMonthStart.toISOString().slice(0, 10)
+
+    const { data: recibosMes } = await supabase
+        .from('recibos_cobro')
+        .select('monto_usd, monto_pagado_usd, estado')
+        .eq('condominio_id', adminPerfil.condominio_id)
+        .gte('fecha_emision', monthStartStr)
+        .lt('fecha_emision', nextMonthStartStr)
+
+    let totalEmitidoMes = 0
+    let totalRecaudadoMes = 0
+    let totalPendienteMes = 0
+
+    if (recibosMes) {
+        recibosMes.forEach(r => {
+            totalEmitidoMes += Number(r.monto_usd)
+            totalRecaudadoMes += Number(r.monto_pagado_usd)
+            if (r.estado !== 'pagado') {
+                totalPendienteMes += (Number(r.monto_usd) - Number(r.monto_pagado_usd))
+            }
+        })
+    }
+
+    const { data: egresosMes } = await supabase
+        .from('egresos')
+        .select('monto_usd')
+        .eq('condominio_id', adminPerfil.condominio_id)
+        .gte('fecha_gasto', monthStartStr)
+        .lt('fecha_gasto', nextMonthStartStr)
+
+    const totalEgresosMes = egresosMes?.reduce((acc, e) => acc + Number(e.monto_usd), 0) || 0
+    const saldoNetoMes = totalRecaudadoMes - totalEgresosMes
+
+    const { count: ticketsAbiertosCount } = await supabase
+        .from('tickets_soporte')
+        .select('*', { count: 'exact', head: true })
+        .eq('condominio_id', adminPerfil.condominio_id)
+        .eq('estado', 'abierto')
+
+    const { data: inmueblesData } = await supabase
+        .from('inmuebles')
+        .select('alicuota, propietario_id')
+        .eq('condominio_id', adminPerfil.condominio_id)
+
+    const inmueblesSinPropietario = (inmueblesData || []).filter(i => !i.propietario_id).length
+    const sumaAlicuotas = (inmueblesData || []).reduce((acc, i) => acc + Number(i.alicuota), 0)
+    const alicuotasOk = Math.abs(1 - sumaAlicuotas) < 0.001
+
+    let tasaBcvRegistradaHoy = true
+    try {
+        const { data: tasaDb } = await supabase
+            .from('tasa_bcv')
+            .select('fecha')
+            .order('fecha', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        const todayStr = now.toISOString().slice(0, 10)
+        const lastTasaStr = (tasaDb as { fecha?: string | null } | null)?.fecha
+        tasaBcvRegistradaHoy = !!lastTasaStr && lastTasaStr === todayStr
+    } catch (e) {
+        tasaBcvRegistradaHoy = true
+    }
+
+    const cuentasBancarias = Array.isArray(condominioData?.cuentas_bancarias) ? condominioData.cuentas_bancarias : []
+    const tieneCuentasBancarias = cuentasBancarias.length > 0
+
+    const alerts: { title: string; detail: string; href?: string }[] = []
+    if (totalPendientes > 0) alerts.push({ title: 'Pagos por conciliar', detail: `Tienes ${totalPendientes} pago(s) en revisión.`, href: '/dashboard/admin' })
+    if ((ticketsAbiertosCount || 0) > 0) alerts.push({ title: 'Soporte pendiente', detail: `${ticketsAbiertosCount} ticket(s) abierto(s).`, href: '/dashboard/admin/soporte' })
+    if (inmueblesSinPropietario > 0) alerts.push({ title: 'Inmuebles sin propietario', detail: `${inmueblesSinPropietario} inmueble(s) sin asignación.`, href: '/dashboard/admin/vecinos' })
+    if (!tieneCuentasBancarias) alerts.push({ title: 'Cuentas bancarias', detail: 'No hay cuentas bancarias configuradas.', href: '/dashboard/admin/ajustes' })
+    if (!alicuotasOk) alerts.push({ title: 'Alicuotas', detail: `La suma de alícuotas es ${sumaAlicuotas.toFixed(4)} (debería ser 1.0000).`, href: '/dashboard/admin/ajustes' })
+    if (!tasaBcvRegistradaHoy) alerts.push({ title: 'Tasa BCV', detail: 'No hay una tasa registrada para hoy en el sistema.', href: '/dashboard/admin/ajustes' })
+
+    type RecaudacionMensualRow = {
+        month_start: string
+        emitido_usd: number
+        recaudado_usd: number
+        pendiente_usd: number
+    }
+
+    let tendencia6m: RecaudacionMensualRow[] = []
+    try {
+        const { data: tendenciaData } = await supabase
+            .rpc('get_recaudacion_mensual', { condo_id: adminPerfil.condominio_id, months: 6 })
+
+        tendencia6m = (tendenciaData as RecaudacionMensualRow[] | null) || []
+    } catch (e) {
+        tendencia6m = []
+    }
+
+    // Fallback seguro si la RPC no existe o retorna vacío: 6 meses en 0
+    if (!tendencia6m || tendencia6m.length === 0) {
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const months: RecaudacionMensualRow[] = []
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(lastMonthStart.getFullYear(), lastMonthStart.getMonth() - i, 1)
+            months.push({
+                month_start: d.toISOString().slice(0, 10),
+                emitido_usd: 0,
+                recaudado_usd: 0,
+                pendiente_usd: 0,
+            })
+        }
+        tendencia6m = months
+    }
+
+    const maxRecaudado6m = Math.max(0, ...tendencia6m.map(m => Number(m.recaudado_usd) || 0))
 
     // Obtener Tasa BCV Oficial para el Layout
     let tasaBcv = 36.50;
@@ -177,7 +295,7 @@ export default async function AdminDashboardPage({
                         <div className="flex items-center gap-3 border-l border-slate-200 pl-5 ml-2 cursor-pointer group">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-slate-800 leading-tight group-hover:text-[#1e3a8a] transition-colors">{adminPerfil?.nombres} {adminPerfil?.apellidos}</p>
-                                <p className="text-[10px] text-slate-500 font-medium">Súper Administrador</p>
+                                <p className="text-[10px] text-slate-500 font-medium">Administrador</p>
                             </div>
                             <div className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden border-2 border-slate-100 shadow-sm group-hover:border-[#1e3a8a]/30 transition-all flex items-center justify-center font-bold text-[#1e3a8a]">
                                 {/* Initial Avatar */}
@@ -233,14 +351,47 @@ export default async function AdminDashboardPage({
                         </div>
                     </div>
 
-                    {/* Fila Métrica Principal (3 Tarjetas) */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-orange-500" />
+                                Alertas
+                            </h3>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{alerts.length} activa(s)</span>
+                        </div>
+                        <div className="p-6">
+                            {alerts.length === 0 ? (
+                                <div className="flex items-center gap-3 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-4 font-bold text-sm">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Todo en orden. No hay alertas críticas.
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                    {alerts.map((a, idx) => (
+                                        <div key={idx} className="flex items-start justify-between gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900">{a.title}</p>
+                                                <p className="text-xs text-slate-500 mt-1">{a.detail}</p>
+                                            </div>
+                                            {a.href ? (
+                                                <Link href={a.href} className="text-xs font-black text-[#1e3a8a] hover:underline whitespace-nowrap">Revisar</Link>
+                                            ) : (
+                                                <span className="text-xs font-black text-slate-400 whitespace-nowrap">Revisar</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-red-200 transition-all cursor-default">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500 border border-red-100">
                                     <Wallet className="w-6 h-6" />
                                 </div>
-                                <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-red-100">+12% vs mes pasado</span>
+                                <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-red-100">Total</span>
                             </div>
                             <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Deuda Total Pendiente</p>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tight">${totalCuentasPorCobrar.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
@@ -252,23 +403,61 @@ export default async function AdminDashboardPage({
                                 <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 border border-emerald-100">
                                     <TrendingUp className="w-6 h-6" />
                                 </div>
-                                <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-emerald-100">Meta: 85%</span>
+                                <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-emerald-100">{totalEmitidoMes > 0 ? Math.round((totalRecaudadoMes / totalEmitidoMes) * 100) : 0}%</span>
                             </div>
-                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Recaudado (Mes Actual)</p>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">${totalRecaudado.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1">{(totalRecaudado * tasaBcv).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.</p>
+                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Recaudado (Mes)</p>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">${totalRecaudadoMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+                            <p className="text-sm text-slate-400 font-medium mt-1">Emitido: ${totalEmitidoMes.toLocaleString('en-US', { minimumFractionDigits: 2 })} • Pendiente: ${totalPendienteMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                         </div>
 
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all cursor-default">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${saldoNetoMes >= 0 ? 'bg-blue-50 text-[#1e3a8a] border-blue-100' : 'bg-orange-50 text-orange-500 border-orange-100'}`}>
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <span className={`text-[10px] font-bold px-2 py-1.5 rounded-md border ${saldoNetoMes >= 0 ? 'bg-blue-50 text-[#1e3a8a] border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>Saldo</span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Saldo Neto (Mes)</p>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">${saldoNetoMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+                            <p className="text-sm text-slate-400 font-medium mt-1">Egresos: ${totalEgresosMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-orange-200 transition-all cursor-default">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 border border-orange-100">
                                     <Clock className="w-6 h-6" />
                                 </div>
-                                <span className="bg-orange-50 text-orange-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-orange-100">Acción Urgente</span>
+                                <span className="bg-orange-50 text-orange-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-orange-100">Revisión</span>
                             </div>
-                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Conciliación Bancaria Pendiente</p>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{totalPendientes} Pagos</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1 truncate">Esperando su pronta revisión administrativa</p>
+                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Pagos por Conciliar</p>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{totalPendientes} Pago(s)</h2>
+                            <p className="text-sm text-slate-400 font-medium mt-1">{montoTotalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.</p>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-red-200 transition-all cursor-default">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500 border border-red-100">
+                                    <AlertCircle className="w-6 h-6" />
+                                </div>
+                                <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-red-100">Soporte</span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Tickets Abiertos</p>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{ticketsAbiertosCount || 0}</h2>
+                            <p className="text-sm text-slate-400 font-medium mt-1">Pendientes por atender</p>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all cursor-default">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 border border-slate-200">
+                                    <Building className="w-6 h-6" />
+                                </div>
+                                <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-slate-200">Datos</span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Inmuebles sin Propietario</p>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{inmueblesSinPropietario}</h2>
+                            <p className="text-sm text-slate-400 font-medium mt-1">Suma alícuotas: {sumaAlicuotas.toFixed(4)}</p>
                         </div>
                     </div>
 
@@ -294,18 +483,21 @@ export default async function AdminDashboardPage({
                                         <div className="border-t border-slate-400 border-dashed w-full h-[1px]"></div>
                                         <div className="border-t border-slate-400 border-dashed w-full h-[1px]"></div>
                                     </div>
-                                    {['Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((month, i) => {
-                                        const heights = ['35%', '42%', '30%', '55%', '48%', '85%'];
-                                        const isLast = i === 5;
+                                    {tendencia6m.map((m, i) => {
+                                        const monthLabel = format(new Date(m.month_start), 'MMM', { locale: es })
+                                        const value = Number(m.recaudado_usd) || 0
+                                        const heightPct = maxRecaudado6m > 0 ? (value / maxRecaudado6m) * 100 : 0
+                                        const heightStyle = value > 0 ? `${Math.max(6, Math.round(heightPct))}%` : '2%'
+                                        const isLast = i === tendencia6m.length - 1
                                         return (
-                                            <div key={month} className="flex-1 flex flex-col items-center justify-end h-full relative group cursor-pointer z-10 hover:-translate-y-2 transition-transform duration-300">
+                                            <div key={m.month_start} className="flex-1 flex flex-col items-center justify-end h-full relative group cursor-pointer z-10 hover:-translate-y-2 transition-transform duration-300">
                                                 {isLast && (
                                                     <div className="absolute -top-10 bg-slate-800 text-white text-xs lg:text-sm font-bold px-3 py-1.5 rounded-lg shadow-md animate-bounce">
-                                                        ${totalRecaudado ? (totalRecaudado / 1000).toFixed(1) : '8.2'}k
+                                                        ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </div>
                                                 )}
-                                                <div className={`w-full max-w-[4rem] rounded-t-sm transition-all duration-500 shadow-inner ${isLast ? 'bg-[#1e3a8a] group-hover:bg-blue-900 border-t-2 border-blue-400' : 'bg-slate-300 group-hover:bg-slate-400'}`} style={{ height: heights[i] }}></div>
-                                                <span className={`text-xs mt-3 font-bold ${isLast ? 'text-[#1e3a8a]' : 'text-slate-400'}`}>{month.toUpperCase()}</span>
+                                                <div className={`w-full max-w-[4rem] rounded-t-sm transition-all duration-500 shadow-inner ${isLast ? 'bg-[#1e3a8a] group-hover:bg-blue-900 border-t-2 border-blue-400' : 'bg-slate-300 group-hover:bg-slate-400'}`} style={{ height: heightStyle }}></div>
+                                                <span className={`text-xs mt-3 font-bold ${isLast ? 'text-[#1e3a8a]' : 'text-slate-400'}`}>{monthLabel.toUpperCase()}</span>
                                             </div>
                                         )
                                     })}

@@ -28,21 +28,25 @@ export default function ExcelActions() {
             sheet.mergeCells('A1', 'O1');
             const titleRow = sheet.getRow(1);
             titleRow.getCell(1).value = `REGISTRO ANUAL DE COBROS - ${result.condominio || 'CONDOMINIO'}`;
-            titleRow.font = { name: 'Inter', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-            titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
             titleRow.height = 40;
-            titleRow.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF1E3A8A' } // El azul oscuro del sistema
-            };
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = titleRow.getCell(c);
+                cell.font = { name: 'Inter', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; // Azul oscuro
+            }
 
             // 2. Subtítulo Año
             sheet.mergeCells('A2', 'O2');
             const subRow = sheet.getRow(2);
             subRow.getCell(1).value = `Año Fiscal: ${new Date().getFullYear()}`;
-            subRow.font = { size: 12, italic: true };
-            subRow.alignment = { horizontal: 'center' };
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = subRow.getCell(c);
+                cell.font = { size: 12, italic: true };
+                cell.alignment = { horizontal: 'center' };
+            }
 
             // 3. Encabezados de Tabla
             const headers = [
@@ -53,14 +57,14 @@ export default function ExcelActions() {
 
             const headerRow = sheet.getRow(4);
             headerRow.values = headers;
-            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-            headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-            headerRow.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF334155' } // Slate 700
-            };
             headerRow.height = 25;
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = headerRow.getCell(c);
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // Slate 700
+            }
 
             // 4. Agregar Datos
             const rows = result.data || [];
@@ -77,11 +81,9 @@ export default function ExcelActions() {
 
                 // Estilo filas alternas
                 if (index % 2 === 0) {
-                    row.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'FFF8FAFC' } // Slate 50
-                    };
+                    for (let c = 1; c <= 15; c++) {
+                        row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }; // Slate 50
+                    }
                 }
 
                 // Alineaciones campos numéricos

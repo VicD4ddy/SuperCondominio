@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Trash2, UserMinus, Loader2, Sparkles } from 'lucide-react'
-import { eliminarVecinoAction, desvincularInmuebleAction } from './actions'
+import { eliminarVecinoAction, desvincularInmuebleAction, eliminarInmuebleAction } from './actions'
 
 interface Props {
     perfilId?: string;
@@ -32,10 +32,29 @@ export default function VecinoActions({ perfilId, inmuebleId, tienePropietario }
         setIsLoading(false)
     }
 
+    const handleEliminarInmueble = async () => {
+        if (!confirm('¿Estás seguro de eliminar este inmueble por completo del condominio?')) return
+
+        setIsLoading(true)
+        const res = await eliminarInmuebleAction(inmuebleId)
+        if (!res.success) alert(res.error)
+        setIsLoading(false)
+    }
+
     if (!tienePropietario) return (
-        <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
-            <Sparkles className="w-3 h-3" />
-            Listo para asignar
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase tracking-widest bg-blue-50/50 p-2 px-3 rounded-lg border border-blue-100/50">
+                <Sparkles className="w-3 h-3" />
+                Listo para asignar
+            </div>
+            <button
+                onClick={handleEliminarInmueble}
+                disabled={isLoading}
+                title="Eliminar este inmueble del sistema"
+                className="p-2 bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 border border-slate-100"
+            >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            </button>
         </div>
     )
 

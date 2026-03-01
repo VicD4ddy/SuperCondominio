@@ -184,6 +184,32 @@ export async function crearInmuebleAction(formData: FormData) {
     }
 }
 
+export async function eliminarInmuebleAction(inmuebleId: string) {
+    try {
+        const supabase = await createClient()
+
+        // 1. Validar Admin
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { success: false, error: 'No autorizado' }
+
+        // 2. Eliminar
+        const { error } = await supabase
+            .from('inmuebles')
+            .delete()
+            .eq('id', inmuebleId)
+
+        if (error) {
+            console.error("Error al eliminar inmueble:", error)
+            return { success: false, error: 'No se pudo eliminar el inmueble. Asegúrate de que no tenga registros vinculados (como recibos de cobro).' }
+        }
+
+        revalidatePath('/dashboard/admin/vecinos')
+        return { success: true }
+    } catch (err) {
+        return { success: false, error: 'Error inesperado.' }
+    }
+}
+
 export async function importarInmueblesMasivoAction(items: any[]) {
     try {
         const { user, profile: adminPerfil } = await getAdminProfile()

@@ -28,19 +28,22 @@ export default async function AdminVecinosPage() {
         .select(`
             id,
             identificador,
-            propietarios:propietario_id (
+            propietario:perfiles (
                 id,
                 nombres,
                 apellidos,
                 telefono,
-                email,
                 auth_user_id 
             )
         `)
         .eq('condominio_id', adminPerfil.condominio_id)
         .order('identificador', { ascending: true })
 
-    const inmueblesVancantes = inmuebles?.filter(i => !i.propietarios) || []
+    if (error) {
+        console.error('Error fetching inmuebles:', JSON.stringify(error, null, 2))
+    }
+
+    const inmueblesVancantes = inmuebles?.filter(i => !i.propietario) || []
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
@@ -85,7 +88,7 @@ export default async function AdminVecinosPage() {
                         </div>
                     ) : (
                         inmuebles.map((inmueble) => {
-                            const prop: any = Array.isArray(inmueble.propietarios) ? inmueble.propietarios[0] : inmueble.propietarios;
+                            const prop: any = Array.isArray(inmueble.propietario) ? inmueble.propietario[0] : inmueble.propietario;
 
                             return (
                                 <div key={inmueble.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:border-blue-200 transition-colors">
@@ -104,11 +107,6 @@ export default async function AdminVecinosPage() {
                                             {prop.telefono && (
                                                 <p className="text-xs text-slate-500 flex items-center gap-2">
                                                     <Phone className="w-3 h-3" /> {prop.telefono}
-                                                </p>
-                                            )}
-                                            {prop.email && (
-                                                <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                                    <Mail className="w-3 h-3" /> {prop.email}
                                                 </p>
                                             )}
                                         </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wallet, Users, Settings, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Wallet, Users, Settings, Megaphone, History } from 'lucide-react'
 
 export default function AdminBottomNav() {
     const pathname = usePathname()
@@ -32,6 +32,12 @@ export default function AdminBottomNav() {
             href: '/dashboard/admin/vecinos',
             icon: Users,
             isActive: pathname.startsWith('/dashboard/admin/vecinos')
+        },
+        {
+            name: 'Historial',
+            href: '/dashboard/admin/logs',
+            icon: History,
+            isActive: pathname.startsWith('/dashboard/admin/logs')
         },
         {
             name: 'Ajustes',

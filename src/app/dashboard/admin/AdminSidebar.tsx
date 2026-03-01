@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Wallet, Users, Settings, LogOut, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Wallet, Users, Settings, LogOut, Megaphone, History } from 'lucide-react'
 import { signOutAction } from '@/app/auth/actions'
 
 export default function AdminSidebar() {
@@ -32,6 +32,12 @@ export default function AdminSidebar() {
             href: '/dashboard/admin/anuncios',
             icon: Megaphone,
             isActive: pathname.startsWith('/dashboard/admin/anuncios')
+        },
+        {
+            name: 'Historial',
+            href: '/dashboard/admin/logs',
+            icon: History,
+            isActive: pathname.startsWith('/dashboard/admin/logs')
         },
         {
             name: 'Ajustes',

@@ -12,13 +12,39 @@ export default async function AdminLogsPage() {
         return <div className="p-5 text-red-500">Error: No autorizado.</div>
     }
 
-    // 1. Obtener Logs (Filtrados por el condominio del admin)
-    const { data: logs, error } = await supabase
-        .from('logs_sistema')
-        .select('*, perfiles(nombres, apellidos)')
+    // 1. Obtener Historial (Pagos Verificados/Rechazados por ahora)
+    // Ya que logs_sistema aún no tiene condominio_id, usamos pagos procesados como el historial principal
+    const { data: pagos, error } = await supabase
+        .from('pagos_reportados')
+        .select(`
+            id,
+            monto,
+            moneda,
+            estado,
+            referencia,
+            updated_at,
+            inmuebles (identificador),
+            perfiles (nombres, apellidos)
+        `)
         .eq('condominio_id', adminPerfil.condominio_id)
-        .order('created_at', { ascending: false })
+        .in('estado', ['verificado', 'rechazado'])
+        .order('updated_at', { ascending: false })
         .limit(100)
+
+    // Mapear pagos al formato de bitácora
+    const logs = (pagos || []).map(pago => {
+        const esVerificado = pago.estado === 'verificado'
+        const inmueble = Array.isArray(pago.inmuebles) ? pago.inmuebles[0] : pago.inmuebles
+        const perfil = Array.isArray(pago.perfiles) ? pago.perfiles[0] : pago.perfiles
+
+        return {
+            id: pago.id,
+            evento: esVerificado ? 'Pago Verificado' : 'Pago Anulado',
+            detalles: `Cobro de ${pago.monto} ${pago.moneda} (Ref: ${pago.referencia || 'N/A'}) referenciado al inmueble ${inmueble?.identificador || 'N/A'}.`,
+            created_at: pago.updated_at,
+            perfil: perfil
+        }
+    })
 
     return (
         <div className="p-6 md:p-10 space-y-8 pb-24 md:pb-10">
@@ -66,7 +92,7 @@ export default async function AdminLogsPage() {
                                             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full">
                                                 <User className="w-3.5 h-3.5 text-slate-400" />
                                                 <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">
-                                                    {log.perfiles ? `${log.perfiles.nombres} ${log.perfiles.apellidos}` : 'Sistema / Admin'}
+                                                    {log.perfil ? `${log.perfil.nombres} ${log.perfil.apellidos}` : 'Sistema / Admin'}
                                                 </span>
                                             </div>
                                         </td>

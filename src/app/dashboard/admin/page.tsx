@@ -147,7 +147,27 @@ export default async function AdminDashboardPage({
 
         const todayStr = now.toISOString().slice(0, 10)
         const lastTasaStr = (tasaDb as { fecha?: string | null } | null)?.fecha
-        tasaBcvRegistradaHoy = !!lastTasaStr && lastTasaStr === todayStr
+
+        if (lastTasaStr === todayStr) {
+            tasaBcvRegistradaHoy = true
+        } else {
+            // Sincronización automática de la tasa BCV si no existe la de hoy
+            const apiRes = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { next: { revalidate: 3600 } })
+            if (apiRes.ok) {
+                const bcvData = await apiRes.json()
+                if (bcvData && bcvData.promedio) {
+                    await supabase.from('tasa_bcv').insert({
+                        tasa: bcvData.promedio,
+                        fecha: todayStr
+                    })
+                    tasaBcvRegistradaHoy = true
+                } else {
+                    tasaBcvRegistradaHoy = false
+                }
+            } else {
+                tasaBcvRegistradaHoy = false
+            }
+        }
     } catch (e) {
         tasaBcvRegistradaHoy = true
     }

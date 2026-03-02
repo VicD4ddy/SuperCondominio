@@ -5,8 +5,6 @@ import fs from 'fs'
 dotenv.config({ path: '.env.local' })
 
 async function run() {
-    console.log("Dropping alicuota column...")
-
     const envData = fs.readFileSync('.env.local', 'utf8')
     let serviceRoleKey = ''
     for (const l of envData.split('\n')) {
@@ -18,11 +16,9 @@ async function run() {
     if (serviceRoleKey) {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
         const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
-
-        // Use RPC to execute raw SQL to drop column if available. Or just use REST if we had a dedicated function.
-        // Sadly standard supabase client js doesn't have a `.query()` to run arbitrary DDL without an RPC.
-        // Wait, wait... Supabase has no direct arbitrary SQL execution from the javascript client.
-        console.log("Cannot drop column via client without an RPC that executes raw SQL, or pg module.")
+        // Check policies
+        const { data: pgs, error } = await adminSupabase.from('pg_policies').select('*').eq('tablename', 'tasa_bcv')
+        console.log("Policies for tasa_bcv:", pgs, error)
     }
 }
 run()

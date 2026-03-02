@@ -5,7 +5,7 @@ import { FileSpreadsheet, Upload, Download, Loader2, CheckCircle2, AlertCircle, 
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
-import { getInmueblesDatosAction, importarInmueblesMasivoAction, crearInmuebleAction, crearVecinoAction } from './actions'
+import { getInmueblesDatosAction, importarInmueblesMasivoAction, crearInmuebleAction, crearVecinoAction, eliminarInmuebleAction } from './actions'
 import { toast } from 'sonner'
 
 export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmueblesVacantes: any[] }) {
@@ -137,7 +137,11 @@ export default function RegistroMasivoVecinos({ inmueblesVacantes }: { inmuebles
             if (cedula && resInm.id) {
                 formData.append('inmueble_id', resInm.id);
                 const resVec = await crearVecinoAction(formData);
-                if (!resVec.success) throw new Error(resVec.error);
+                if (!resVec.success) {
+                    // Rollback: Eliminar el inmueble huérfano si falló la creación del dueño
+                    await eliminarInmuebleAction(resInm.id);
+                    throw new Error(resVec.error);
+                }
             }
 
             toast.success('Registro individual completado con éxito.')

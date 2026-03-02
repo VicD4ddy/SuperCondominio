@@ -65,7 +65,7 @@ export async function crearVecinoAction(formData: FormData) {
 
         if (errorPerfil) {
             console.error("Error al crear perfil:", errorPerfil)
-            return { success: false, error: 'Error al crear el perfil del vecino.' }
+            return { success: false, error: errorPerfil.message || 'Error al crear el perfil del vecino.' }
         }
 
         // 5. Vincular con inmueble si se especificó
@@ -77,6 +77,7 @@ export async function crearVecinoAction(formData: FormData) {
 
             if (errorInmueble) {
                 console.error("Error al vincular inmueble:", errorInmueble)
+                return { success: false, error: errorInmueble.message || 'Error al vincular inmueble con el propietario.' }
             }
         }
 

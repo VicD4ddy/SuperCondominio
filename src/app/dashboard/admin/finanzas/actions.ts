@@ -101,6 +101,10 @@ export async function getReporteConsolidadosAction() {
             const prop = inm.propietario as any
             const ultimoPago = prop ? pagos.find(p => p.perfil_id === prop.id) : null
 
+            // Calcular Meses en Mora
+            const recibosAdeudados = recibosInm.filter(r => r.estado !== 'pagado')
+            const mesesMora = recibosAdeudados.length
+
             return {
                 id: inm.id,
                 identificador: inm.identificador,
@@ -109,6 +113,7 @@ export async function getReporteConsolidadosAction() {
                 cargoMesActualUSD,
                 cargoMesNombre: ultimoRecibo?.mes || 'N/A',
                 saldoTotalUSD,
+                mesesMora,
                 ultimoPago: ultimoPago ? {
                     monto_bs: Number(ultimoPago.monto_bs),
                     fecha_pago: ultimoPago.fecha_pago

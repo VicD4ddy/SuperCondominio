@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
+import { toast } from 'sonner'
 
 interface ReporteItem {
     id: string
@@ -185,12 +186,14 @@ export default function ReporteCuentasPorCobrar({ data, tasaBcv }: ReporteProps)
                                         <div className="flex justify-center gap-2">
                                             <button
                                                 title="Registrar Pago"
+                                                onClick={() => toast.info('Módulo de registro de pagos manuales en desarrollo.')}
                                                 className="p-2 text-slate-400 hover:text-[#1e3a8a] hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
                                             >
                                                 <CreditCard className="w-4 h-4" />
                                             </button>
                                             <button
                                                 title="Ver Detalle"
+                                                onClick={() => toast.info(`Mostrando detalles para: ${item.identificador} (En desarrollo)`)}
                                                 className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200 shadow-sm hover:shadow"
                                             >
                                                 <Eye className="w-4 h-4" />

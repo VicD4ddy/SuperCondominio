@@ -131,12 +131,10 @@ export default async function AdminDashboardPage({
 
     const { data: inmueblesData } = await supabase
         .from('inmuebles')
-        .select('alicuota, propietario_id')
+        .select('propietario_id')
         .eq('condominio_id', adminPerfil.condominio_id)
 
     const inmueblesSinPropietario = (inmueblesData || []).filter(i => !i.propietario_id).length
-    const sumaAlicuotas = (inmueblesData || []).reduce((acc, i) => acc + Number(i.alicuota), 0)
-    const alicuotasOk = Math.abs(1 - sumaAlicuotas) < 0.001
 
     let tasaBcvRegistradaHoy = true
     try {
@@ -162,7 +160,6 @@ export default async function AdminDashboardPage({
     if ((ticketsAbiertosCount || 0) > 0) alerts.push({ title: 'Soporte pendiente', detail: `${ticketsAbiertosCount} ticket(s) abierto(s).`, href: '/dashboard/admin/soporte' })
     if (inmueblesSinPropietario > 0) alerts.push({ title: 'Inmuebles sin propietario', detail: `${inmueblesSinPropietario} inmueble(s) sin asignación.`, href: '/dashboard/admin/vecinos' })
     if (!tieneCuentasBancarias) alerts.push({ title: 'Cuentas bancarias', detail: 'No hay cuentas bancarias configuradas.', href: '/dashboard/admin/ajustes' })
-    if (!alicuotasOk) alerts.push({ title: 'Alicuotas', detail: `La suma de alícuotas es ${sumaAlicuotas.toFixed(4)} (debería ser 1.0000).`, href: '/dashboard/admin/ajustes' })
     if (!tasaBcvRegistradaHoy) alerts.push({ title: 'Tasa BCV', detail: 'No hay una tasa registrada para hoy en el sistema.', href: '/dashboard/admin/ajustes' })
 
     type RecaudacionMensualRow = {
@@ -457,7 +454,7 @@ export default async function AdminDashboardPage({
                             </div>
                             <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Inmuebles sin Propietario</p>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tight">{inmueblesSinPropietario}</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1">Suma alícuotas: {sumaAlicuotas.toFixed(4)}</p>
+                            <p className="text-sm text-slate-400 font-medium mt-1">Pendientes de asignar</p>
                         </div>
                     </div>
 

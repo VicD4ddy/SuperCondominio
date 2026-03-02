@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react'
 import { Search, Download, User, Building, Clock, ChevronRight, FileText, TrendingUp, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 interface ReporteItem {
     id: string
@@ -26,6 +28,98 @@ interface ReporteProps {
 
 export default function ReporteCuentasPorCobrar({ data, tasaBcv }: ReporteProps) {
     const [searchTerm, setSearchTerm] = useState('')
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+
+    const handleDownloadTemplate = async () => {
+        setDownloadingTemplate(true);
+        try {
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('Plantilla Importación');
+
+            // 1. Título principal
+            sheet.mergeCells('A1', 'O1');
+            const titleRow = sheet.getRow(1);
+            titleRow.getCell(1).value = `PLANTILLA DE IMPORTACIÓN DE DEUDAS Y RECIBOS`;
+            titleRow.height = 40;
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = titleRow.getCell(c);
+                cell.font = { name: 'Inter', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; // Azul oscuro
+            }
+
+            // 2. Subtítulo Instrucciones
+            sheet.mergeCells('A2', 'O2');
+            const subRow = sheet.getRow(2);
+            subRow.getCell(1).value = `Instrucciones: Rellena los datos de los inmuebles. Los montos de los meses deben estar en Dólares (USD).`;
+            subRow.height = 20;
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = subRow.getCell(c);
+                cell.font = { size: 10, italic: true, color: { argb: 'FF334155' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+            }
+
+            // 3. Encabezados de Tabla (Fila 4)
+            const headers = [
+                'Identificador', 'Propietario', 'Cedula',
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+
+            const headerRow = sheet.getRow(4);
+            headerRow.values = headers;
+            headerRow.height = 25;
+
+            for (let c = 1; c <= 15; c++) {
+                const cell = headerRow.getCell(c);
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // Slate 700
+            }
+
+            // 4. Filas de ejemplo (Opcional, para guiar al usuario)
+            sheet.addRow(['A-11', 'Juan Pérez', 'V-12345678', 50.00, 50.00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            sheet.addRow(['B-22', 'María Gómez', 'V-87654321', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+            // Estilos a filas de ejemplo
+            for (let r = 5; r <= 6; r++) {
+                const row = sheet.getRow(r);
+                for (let c = 4; c <= 15; c++) {
+                    row.getCell(c).alignment = { horizontal: 'right' };
+                    row.getCell(c).numFmt = '#,##0.00" $"';
+                }
+                row.getCell(1).alignment = { horizontal: 'center' };
+                row.getCell(3).alignment = { horizontal: 'center' };
+            }
+
+            // 5. Ajustes de anchos
+            sheet.getColumn(1).width = 15; // Identificador
+            sheet.getColumn(2).width = 35; // Propietario
+            sheet.getColumn(3).width = 15; // Cédula
+            for (let i = 4; i <= 15; i++) {
+                sheet.getColumn(i).width = 12; // Meses
+            }
+
+            // Inmovilizar encabezados
+            sheet.views = [
+                { state: 'frozen', xSplit: 0, ySplit: 4 }
+            ];
+
+            // Generar archivo
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, `Plantilla_Cuentas_SuperCondominio.xlsx`);
+
+        } catch (error) {
+            console.error("Error generating Excel template:", error);
+            alert("Error al generar la plantilla Excel.");
+        } finally {
+            setDownloadingTemplate(false);
+        }
+    }
 
     const filteredData = useMemo(() => {
         return data.filter(item =>
@@ -133,11 +227,16 @@ export default function ReporteCuentasPorCobrar({ data, tasaBcv }: ReporteProps)
                             <div className="mt-3">
                                 <p className="text-sm text-slate-500 mb-4 px-4">Inicia la gestión financiera de tu condominio hoy mismo.</p>
                                 <button
-                                    onClick={() => window.location.href = '/Descarga_Plantilla_Deudas_SuperCondominio.xlsx'}
-                                    className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm"
+                                    onClick={handleDownloadTemplate}
+                                    disabled={downloadingTemplate}
+                                    className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-50"
                                 >
-                                    <Download className="w-4 h-4" />
-                                    Descargar Plantilla de Ejemplo
+                                    {downloadingTemplate ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Download className="w-4 h-4" />
+                                    )}
+                                    {downloadingTemplate ? 'Generando Plantilla...' : 'Descargar Plantilla de Ejemplo'}
                                 </button>
                             </div>
                         ) : (

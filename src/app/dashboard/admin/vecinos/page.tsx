@@ -98,17 +98,24 @@ export default async function AdminVecinosPage() {
                                         identificadorInicial={inmueble.identificador}
                                     />
 
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group relative mb-4">
-                                        <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
-                                            {prop.nombres} {prop.apellidos}
-                                        </p>
-
-                                        {prop.telefono && (
-                                            <p className="text-xs text-slate-500 flex items-center gap-2">
-                                                <Phone className="w-3 h-3" /> {prop.telefono}
+                                    {prop ? (
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group relative mb-4">
+                                            <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
+                                                {prop.nombres} {prop.apellidos}
                                             </p>
-                                        )}
-                                    </div>
+
+                                            {prop.telefono && (
+                                                <p className="text-xs text-slate-500 flex items-center gap-2">
+                                                    <Phone className="w-3 h-3" /> {prop.telefono}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 text-red-600 text-[11px] font-bold uppercase tracking-wide flex items-center gap-2 mb-4">
+                                            <UserPlus className="w-4 h-4 opacity-70" />
+                                            Requiere Asignación (Legado)
+                                        </div>
+                                    )}
 
                                     {/* Componente Cliente para Acciones (Fase 30) */}
                                     <VecinoActions

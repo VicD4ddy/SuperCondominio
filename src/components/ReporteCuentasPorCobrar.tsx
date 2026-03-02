@@ -124,10 +124,25 @@ export default function ReporteCuentasPorCobrar({ data, tasaBcv }: ReporteProps)
                 {filteredData.length === 0 && (
                     <div className="py-20 text-center">
                         <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                            <AlertCircle className="w-8 h-8" />
+                            {data.length === 0 ? <FileText className="w-8 h-8 text-[#1e3a8a]/60" /> : <AlertCircle className="w-8 h-8" />}
                         </div>
-                        <h3 className="text-lg font-bold text-slate-800">No se encontraron resultados</h3>
-                        <p className="text-sm text-slate-500">Prueba con otro término de búsqueda.</p>
+                        <h3 className="text-lg font-bold text-slate-800">
+                            {data.length === 0 ? 'Sin Registros en el Sistema' : 'No se encontraron resultados'}
+                        </h3>
+                        {data.length === 0 ? (
+                            <div className="mt-3">
+                                <p className="text-sm text-slate-500 mb-4 px-4">Inicia la gestión financiera de tu condominio hoy mismo.</p>
+                                <button
+                                    onClick={() => window.location.href = '/Descarga_Plantilla_Deudas_SuperCondominio.xlsx'}
+                                    className="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-sm"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Descargar Plantilla de Ejemplo
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-500 mt-1">Prueba con otro término de búsqueda.</p>
+                        )}
                     </div>
                 )}
             </div>

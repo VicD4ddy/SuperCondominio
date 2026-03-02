@@ -217,7 +217,8 @@ export async function crearInmuebleAction(formData: FormData) {
             .from('inmuebles')
             .insert({
                 condominio_id: adminPerfil.condominio_id,
-                identificador
+                identificador,
+                alicuota: 0
             })
             .select()
             .single()
@@ -301,7 +302,7 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                 if (!currentInmuebleId) {
                     const { data: newInm, error: errorInm } = await supabase
                         .from('inmuebles')
-                        .insert({ condominio_id: condominioId, identificador: inmueble })
+                        .insert({ condominio_id: condominioId, identificador: inmueble, alicuota: 0 })
                         .select()
                         .single()
 

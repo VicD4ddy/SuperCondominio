@@ -159,7 +159,10 @@ export default function ExcelActions() {
                     throw new Error('El formato no parece correcto. Falta la columna "Identificador".');
                 }
 
-                const result = await importRecibosExcelAction(data);
+                // Sanitizar la data para que sea un objeto plano (requerido por Server Actions)
+                const plainData = JSON.parse(JSON.stringify(data));
+                const result = await importRecibosExcelAction(plainData);
+
                 if (result.error) throw new Error(result.error);
 
                 setStatus({ type: 'success', message: `Importación exitosa: ${result.count} recibos procesados.` });

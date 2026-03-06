@@ -93,17 +93,47 @@ export async function getReporteConsolidadosAction() {
             const sortedRecibos = [...recibosInm].sort((a, b) => new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime())
             const ultimoRecibo = sortedRecibos[0]
 
-            const saldoTotalUSD = recibosInm.reduce((acc, r) => acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0)
-            const cargoMesActualUSD = ultimoRecibo && ultimoRecibo.estado === 'pendiente' ? Number(ultimoRecibo.monto_usd) : 0
+            const recibosAdeudados = recibosInm.filter(r => r.estado !== 'pagado')
+            const saldoTotalUSD = recibosAdeudados.reduce((acc, r) => acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0)
+
+            let cargoMesActualUSD = 0;
+            let cargoMesNombre = 'N/A';
+
+            if (ultimoRecibo && recibosAdeudados.length > 0) {
+                const sortedAdeudados = [...recibosAdeudados].sort((a, b) => new Date(b.fecha_emision).getTime() - new Date(a.fecha_emision).getTime())
+                const ultimoAdeudado = sortedAdeudados[0]
+
+                if (ultimoAdeudado) {
+                    const fechaRef = new Date(ultimoAdeudado.fecha_emision);
+                    const mesRef = fechaRef.getMonth();
+                    const yearRef = fechaRef.getFullYear();
+
+                    const recibosDelMes = recibosAdeudados.filter(r => {
+                        const d = new Date(r.fecha_emision);
+                        return d.getMonth() === mesRef && d.getFullYear() === yearRef;
+                    });
+
+                    cargoMesActualUSD = recibosDelMes.reduce((acc, r) => acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0);
+
+                    const nombresUnicos = Array.from(new Set(recibosDelMes.map(r => r.mes)));
+                    cargoMesNombre = nombresUnicos.length > 2 ? 'Varias Cuotas' : nombresUnicos.join(' + ');
+                }
+            } else if (ultimoRecibo) {
+                cargoMesNombre = ultimoRecibo.mes;
+            }
+
             const saldoAnteriorUSD = saldoTotalUSD - cargoMesActualUSD
 
             // Último pago asociado al perfil del propietario
             const prop = inm.propietario as any
             const ultimoPago = prop ? pagos.find(p => p.perfil_id === prop.id) : null
 
-            // Calcular Meses en Mora
-            const recibosAdeudados = recibosInm.filter(r => r.estado !== 'pagado')
-            const mesesMora = recibosAdeudados.length
+            // Calcular Meses en Mora (basado en meses únicos de emisión de deuda)
+            const mesesMoraSet = new Set(recibosAdeudados.map(r => {
+                const d = new Date(r.fecha_emision);
+                return `${d.getFullYear()}-${d.getMonth()}`;
+            }));
+            const mesesMora = mesesMoraSet.size;
 
             return {
                 id: inm.id,

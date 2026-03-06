@@ -1,4 +1,4 @@
-import { Search, MessageSquare, Clock, ChevronDown, CheckCircle2, ChevronRight, Receipt, FileText, Megaphone, Bell, TrendingUp, TrendingDown, Building, Calendar, Check, X, Eye, Plus, AlertCircle, Wallet, Download } from 'lucide-react'
+import { Search, MessageSquare, Clock, ChevronDown, CheckCircle2, ChevronRight, Receipt, FileText, Megaphone, Bell, TrendingUp, TrendingDown, Building, Calendar, Check, X, Eye, Plus, AlertCircle, Wallet, Download, Info } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -135,6 +135,13 @@ export default async function AdminDashboardPage({
         .eq('condominio_id', adminPerfil.condominio_id)
 
     const inmueblesSinPropietario = (inmueblesData || []).filter(i => !i.propietario_id).length
+
+    const { data: bitacoraLogs } = await supabase
+        .from('logs_sistema')
+        .select('id, evento, detalles, created_at, perfiles(nombres, apellidos)')
+        .eq('condominio_id', adminPerfil.condominio_id)
+        .order('created_at', { ascending: false })
+        .limit(8)
 
     let tasaBcvRegistradaHoy = true
     try {
@@ -522,21 +529,68 @@ export default async function AdminDashboardPage({
                             </div>
 
                             {/* Última Actividad Social */}
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full max-h-[400px]">
                                 <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                     <h3 className="text-lg font-bold text-slate-900">Bitácora Vecinal Reciente</h3>
-                                    <span className="text-xs font-bold text-[#1e3a8a] cursor-pointer hover:underline uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100">Ir al Foro</span>
+                                    <Link href="/dashboard/admin/logs" className="text-xs font-bold text-[#1e3a8a] cursor-pointer hover:underline uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100">Ver todo</Link>
                                 </div>
-                                <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
-                                    <div className="p-5 flex gap-4 hover:bg-slate-50 transition-colors">
-                                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0 border border-emerald-100">
-                                            <CheckCircle2 className="w-5 h-5" />
+                                <div className="divide-y divide-slate-100 overflow-y-auto custom-scrollbar flex-1">
+                                    {(!bitacoraLogs || bitacoraLogs.length === 0) ? (
+                                        <div className="p-8 flex flex-col items-center justify-center text-center">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                                <Info className="w-6 h-6 text-slate-300" />
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-500">Aún no hay actividad registrada</p>
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-slate-800"><span className="font-bold text-slate-900">Validación de Fondos:</span> Cobro a Inmueble 102 - $85.00</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2 bg-slate-100 px-2 py-0.5 rounded-md inline-block">Hace unas horas • Automático</p>
-                                        </div>
-                                    </div>
+                                    ) : (
+                                        bitacoraLogs.map((log) => {
+                                            const isError = log.evento.toLowerCase().includes('error') || log.evento.toLowerCase().includes('rechaz');
+                                            const isWarning = log.evento.toLowerCase().includes('aviso') || log.evento.toLowerCase().includes('pendiente');
+
+                                            let IconTag = CheckCircle2;
+                                            let iconColors = "bg-emerald-50 text-emerald-500 border-emerald-100";
+
+                                            if (isError) {
+                                                IconTag = AlertCircle;
+                                                iconColors = "bg-red-50 text-red-500 border-red-100";
+                                            } else if (isWarning) {
+                                                IconTag = Info;
+                                                iconColors = "bg-orange-50 text-orange-500 border-orange-100";
+                                            }
+
+                                            // Procesar detalles if JSON
+                                            let logSubtitle = '';
+                                            if (typeof log.detalles === 'string') {
+                                                logSubtitle = log.detalles;
+                                            } else if (log.detalles && typeof log.detalles === 'object') {
+                                                // @ts-ignore
+                                                logSubtitle = log.detalles.referencia || log.detalles.mensaje || JSON.stringify(log.detalles).substring(0, 50);
+                                            }
+
+                                            return (
+                                                <div key={log.id} className="p-5 flex gap-4 hover:bg-slate-50 transition-colors">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${iconColors}`}>
+                                                        <IconTag className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm text-slate-800 font-medium line-clamp-2">
+                                                            <span className="font-bold text-slate-900">{log.evento}:</span> {logSubtitle}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-2">
+                                                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md inline-block">
+                                                                {log.perfiles
+                                                                    ? (Array.isArray(log.perfiles) ? `${log.perfiles[0]?.nombres} ${log.perfiles[0]?.apellidos}` : `${(log.perfiles as any).nombres} ${(log.perfiles as any).apellidos}`)
+                                                                    : 'Automático'}
+                                                            </span>
+                                                            <span className="text-[9px] text-slate-400 font-medium">
+                                                                • {format(new Date(log.created_at), "d MMM, HH:mm", { locale: es })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </div>

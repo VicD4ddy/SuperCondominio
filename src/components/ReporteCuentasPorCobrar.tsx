@@ -205,8 +205,8 @@ export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv 
                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inmueble / Propietario</th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Estatus</th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Mora</th>
-                                    <th className="px-6 py-4 text-[10px] font-bold text-[#1e3a8a] uppercase tracking-widest text-right">Cargo Mes</th>
-                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Saldo Total</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-[#1e3a8a] uppercase tracking-widest text-right">Deuda Mensual</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Deuda Total</th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Acciones</th>
                                 </tr>
                             </thead>

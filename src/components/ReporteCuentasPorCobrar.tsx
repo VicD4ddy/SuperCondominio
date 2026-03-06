@@ -142,9 +142,6 @@ export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv 
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button className="flex items-center gap-2 bg-[#1e3a8a] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-900 transition-all w-full sm:w-auto justify-center">
-                            <Download className="w-4 h-4" /> Exportar PDF
-                        </button>
                     </div>
 
                     {/* Tabs switcher */}

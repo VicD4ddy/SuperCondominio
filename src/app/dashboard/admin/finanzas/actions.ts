@@ -141,7 +141,7 @@ export async function getReporteConsolidadosAction() {
                 propietario: prop ? `${prop.nombres} ${prop.apellidos}` : 'Sin Propietario',
                 saldoAnteriorUSD,
                 cargoMesActualUSD,
-                cargoMesNombre: ultimoRecibo?.mes || 'N/A',
+                cargoMesNombre,
                 saldoTotalUSD,
                 mesesMora,
                 ultimoPago: ultimoPago ? {

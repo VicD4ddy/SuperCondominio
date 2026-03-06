@@ -295,6 +295,7 @@ export async function importRecibosExcelAction(data: any[]) {
 
 interface ManualPaymentProps {
     inmuebleId: string;
+    inmuebleIdentificador: string;
     montoRegistrado: number;
     moneda: 'USD' | 'BS';
     metodo: string;
@@ -329,7 +330,7 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
                 monto_bs: datos.moneda === 'BS' ? datos.montoRegistrado : (datos.montoRegistrado * datos.tasaAplicada),
                 tasa_aplicada: datos.tasaAplicada,
                 monto_equivalente_usd: datos.equivalenteUsd,
-                referencia: datos.referencia || 'Registro Manual de Admin',
+                referencia: `${datos.referencia || 'Registro Manual Adm.'} (Inmueble: ${datos.inmuebleIdentificador})`,
                 fecha_pago: datos.fecha,
                 banco_origen: datos.metodo,
                 banco_destino: 'Caja',

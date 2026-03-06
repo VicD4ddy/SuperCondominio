@@ -44,6 +44,7 @@ export default function ModalRegistroPagoManual({ isOpen, onClose, inmueble, tas
             const { registrarPagoManualAction } = await import('@/app/dashboard/admin/finanzas/actions');
             const res = await registrarPagoManualAction({
                 inmuebleId: inmueble.id,
+                inmuebleIdentificador: inmueble.identificador,
                 montoRegistrado: montoNum,
                 moneda,
                 metodo,

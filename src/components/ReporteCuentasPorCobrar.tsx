@@ -326,7 +326,7 @@ export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv 
                                             const val = Number(item[mes]) || 0;
                                             const isEmpty = val === 0;
                                             return (
-                                                <td key={mes} className={`px-4 py-3 text-right text-sm font-bold font-mono ${isEmpty ? 'text-slate-300' : 'text-red-600 bg-red-50/50'}`}>
+                                                <td key={mes} className={`px-4 py-3 text-right text-sm font-bold font-mono ${isEmpty ? 'text-slate-300' : 'text-emerald-600 bg-emerald-50/50'}`}>
                                                     {isEmpty ? '-' : val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
                                             )

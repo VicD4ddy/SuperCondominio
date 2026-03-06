@@ -28,8 +28,15 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // Fetch current user
-    const { data: { user } } = await supabase.auth.getUser()
+    // Fetch current user with error resilience (Edge Runtime fetch failures)
+    let user = null
+    try {
+        const { data } = await supabase.auth.getUser()
+        user = data.user
+    } catch (error) {
+        console.error('Supabase getUser fetch error (likely transient network drop):', error)
+        user = null
+    }
 
     const isLoginUrl = request.nextUrl.pathname.startsWith('/login')
     const isDashboardUrl = request.nextUrl.pathname.startsWith('/dashboard')

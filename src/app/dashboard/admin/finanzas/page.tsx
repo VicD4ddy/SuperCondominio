@@ -6,6 +6,7 @@ import { getReporteConsolidadosAction, getReporteAnualAction } from './actions'
 import ReporteCuentasPorCobrar from '@/components/ReporteCuentasPorCobrar'
 import ExcelActions from '@/components/ExcelActions'
 import { getAdminProfile } from '@/utils/supabase/admin-helper'
+import PanelMorosidad from '@/components/PanelMorosidad'
 
 export const dynamic = 'force-dynamic';
 
@@ -141,6 +142,26 @@ export default async function AdminFinanzasPage() {
                 </div>
                 {/* =================================== */}
 
+                {/* === PANEL MOROSIDAD === */}
+                {(() => {
+                    const UMBRAL_MESES = 2
+                    const morosos = (reporteData || []).filter((item: any) => item.mesesMora >= UMBRAL_MESES)
+                        .map((item: any) => ({
+                            id: item.id,
+                            identificador: item.identificador,
+                            propietario: item.propietario,
+                            mesesMora: item.mesesMora,
+                            saldoTotalUSD: item.saldoTotalUSD,
+                            perfilId: item.perfilId
+                        }))
+                    return morosos.length > 0 ? (
+                        <div className="pt-6">
+                            <PanelMorosidad morosos={morosos} umbralMeses={UMBRAL_MESES} />
+                        </div>
+                    ) : null
+                })()}
+                {/* ================================ */}
+
                 {/* === INYECCIÓN DE LA CARTA DE PARAMETROS (FASE 16) === */}
                 <div className="pt-6">
                     <ParametrosFinancierosCard
@@ -161,8 +182,8 @@ export default async function AdminFinanzasPage() {
                             <Receipt className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="font-bold text-slate-800 text-lg">Cuota Especial Dinámica</p>
-                            <p className="text-sm text-slate-500">Generar cobro para todos</p>
+                            <p className="font-bold text-slate-800 text-lg">Emitir Cuota Masiva</p>
+                            <p className="text-sm text-slate-500">Mensual o especial a todos los vecinos</p>
                         </div>
                     </div>
                     <div className="bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">

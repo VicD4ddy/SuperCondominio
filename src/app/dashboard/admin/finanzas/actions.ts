@@ -415,3 +415,28 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
         return { success: false, error: 'Error inesperado del servidor.' }
     }
 }
+
+export async function enviarRecordatoriosMorososAction(perfilIds: string[]) {
+    try {
+        const { user, profile: adminPerfil } = await getAdminProfile()
+        const supabase = await createClient()
+        if (!user || !adminPerfil) return { error: 'No autorizado' }
+        if (!perfilIds || perfilIds.length === 0) return { error: 'No hay morosos seleccionados' }
+
+        const notifs = perfilIds.map(perfilId => ({
+            condominio_id: adminPerfil.condominio_id,
+            perfil_id: perfilId,
+            tipo: 'recordatorio_mora',
+            titulo: '⚠️ Recordatorio de Pago Pendiente',
+            mensaje: 'Tienes cuotas de condominio pendientes de pago. Por favor, regulariza tu situación a la brevedad para evitar recargos.',
+            enlace: '/dashboard/propietario/pagos'
+        }))
+
+        const { error } = await supabase.from('notificaciones').insert(notifs)
+        if (error) return { error: 'Error al enviar notificaciones.' }
+
+        return { success: true, count: perfilIds.length }
+    } catch (err: any) {
+        return { error: 'Error inesperado.' }
+    }
+}

@@ -1,8 +1,12 @@
-import { ArrowLeft, Filter, CheckCircle2, Clock, XCircle, ChevronRight, ReceiptIcon } from 'lucide-react'
+import { ArrowLeft, Filter, CheckCircle2, Clock, XCircle, ReceiptIcon, Banknote, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+
+export const dynamic = 'force-dynamic'
 
 export default async function PagosPropietarioPage() {
     const supabase = await createClient()
@@ -13,7 +17,7 @@ export default async function PagosPropietarioPage() {
         redirect('/dashboard/propietario/validar')
     }
 
-    // 1. Obtener inmuebles del propietario para calcular deuda pendiente
+    // 1. Calcular saldo pendiente real
     const { data: inmuebles } = await supabase
         .from('inmuebles')
         .select('id')
@@ -44,10 +48,22 @@ export default async function PagosPropietarioPage() {
         ?.filter(p => p.estado === 'aprobado')
         .reduce((acc, curr) => acc + Number(curr.monto_equivalente_usd), 0) || 0
 
+    // Agrupar pagos por mes para el timeline
+    const pagosPorMes: Record<string, typeof pagos> = {}
+    if (pagos) {
+        for (const pago of pagos) {
+            const llave = format(new Date(pago.created_at), "MMMM yyyy", { locale: es })
+            if (!pagosPorMes[llave]) pagosPorMes[llave] = []
+            pagosPorMes[llave]!.push(pago)
+        }
+    }
+
+    const isSolvente = saldoPendienteUsd <= 0
+
     return (
         <div className="relative pb-24 bg-slate-50 min-h-screen">
 
-            {/* Header Mis Pagos */}
+            {/* Header */}
             <header className="px-5 py-4 flex items-center justify-between border-b border-slate-200 bg-white sticky top-0 z-40">
                 <Link href="/dashboard/propietario" className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
                     <ArrowLeft className="w-5 h-5" />
@@ -62,97 +78,104 @@ export default async function PagosPropietarioPage() {
 
                 {/* Tarjetas de Resumen */}
                 <div className="flex gap-4">
-                    <div className="flex-1 bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                        <p className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-1">SALDO PENDIENTE</p>
-                        <p className="text-xl font-bold text-slate-900">${saldoPendienteUsd.toFixed(2)}</p>
+                    <div className={`flex-1 p-4 rounded-xl border shadow-sm ${isSolvente ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                        <p className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${isSolvente ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {isSolvente ? '✅ SOLVENTE' : '⚠️ PENDIENTE'}
+                        </p>
+                        <p className={`text-xl font-bold ${isSolvente ? 'text-emerald-700' : 'text-red-700'}`}>
+                            {isSolvente ? '$0.00' : `$${saldoPendienteUsd.toFixed(2)}`}
+                        </p>
                     </div>
 
                     <div className="flex-1 bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                        <p className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-1">TOTAL APROBADO</p>
+                        <p className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-1">TOTAL PAGADO</p>
                         <p className="text-xl font-bold text-emerald-600">${totalAprobadoUsd.toFixed(2)}</p>
                     </div>
                 </div>
 
-                {/* Historial de Pagos */}
+                {/* Timeline de Pagos */}
                 <div>
-                    <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-4">HISTORIAL DE PAGOS</h2>
+                    <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase mb-5">HISTORIAL DE PAGOS</h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
-                        {pagos && pagos.length > 0 ? (
-                            pagos.map((pago) => {
-                                const mesRecibo = (pago.recibos_cobro as any)?.mes || 'Abono General'
-                                const formatFecha = new Date(pago.fecha_pago).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-
-                                return (
-                                    <div key={pago.id} className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col shadow-sm cursor-pointer hover:border-slate-300 transition-colors">
-                                        <div className="flex items-center gap-4">
-
-                                            {/* Icono según estado */}
-                                            {pago.estado === 'aprobado' && (
-                                                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                                                    <CheckCircle2 className="w-6 h-6" />
-                                                </div>
-                                            )}
-                                            {(pago.estado === 'en_revision' || pago.estado === 'pendiente') && (
-                                                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                                                    <Clock className="w-6 h-6" />
-                                                </div>
-                                            )}
-                                            {pago.estado === 'rechazado' && (
-                                                <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                                                    <XCircle className="w-6 h-6" />
-                                                </div>
-                                            )}
-
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <h3 className="font-bold text-slate-900 truncate capitalize">{mesRecibo}</h3>
-                                                    <span className="font-bold text-slate-900 ml-2">${Number(pago.monto_equivalente_usd).toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center mt-1">
-                                                    <p className="text-xs text-slate-500 truncate">Ref: #{pago.referencia} • {formatFecha}</p>
-                                                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                                                </div>
-                                                <div className="mt-2 inline-flex">
-                                                    {pago.estado === 'aprobado' && (
-                                                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">Aprobado</span>
-                                                    )}
-                                                    {(pago.estado === 'en_revision' || pago.estado === 'pendiente') && (
-                                                        <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">Pendiente</span>
-                                                    )}
-                                                    {pago.estado === 'rechazado' && (
-                                                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">Rechazado</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Motivo de Rechazo (Opcional, solo si aplica) */}
-                                        {pago.estado === 'rechazado' && pago.nota_admin && (
-                                            <div className="mt-4 bg-red-50 text-red-700 text-xs p-3 rounded-lg border border-red-100">
-                                                <span className="font-bold">Motivo: </span> {pago.nota_admin}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })
-                        ) : (
-                            <div className="text-center py-10 opacity-70">
-                                <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <ReceiptIcon className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <p className="text-slate-500 font-medium pb-1">No hay pagos reportados</p>
-                                <p className="text-slate-400 text-sm">Los comprobantes que envíes aparecerán aquí.</p>
+                    {Object.keys(pagosPorMes).length === 0 ? (
+                        <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 border-dashed opacity-70">
+                            <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <ReceiptIcon className="w-8 h-8 text-slate-400" />
                             </div>
-                        )}
+                            <p className="text-slate-500 font-medium pb-1">No hay pagos reportados</p>
+                            <p className="text-slate-400 text-sm">Los comprobantes que envíes aparecerán aquí.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {Object.entries(pagosPorMes).map(([mes, pagosMes]) => (
+                                <div key={mes}>
+                                    {/* Mes header */}
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-2 h-2 rounded-full bg-[#1e3a8a]"></div>
+                                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest capitalize">{mes}</p>
+                                        <div className="flex-1 h-px bg-slate-200"></div>
+                                    </div>
 
-                    </div>
+                                    {/* Timeline entries */}
+                                    <div className="ml-3 space-y-0 relative">
+                                        {/* Vertical spine */}
+                                        <div className="absolute left-[7px] top-0 bottom-0 w-px bg-slate-100"></div>
+
+                                        {pagosMes?.map((pago, idx) => {
+                                            const mesRecibo = (pago.recibos_cobro as any)?.mes || 'Abono General'
+                                            const formatFecha = format(new Date(pago.fecha_pago), "d 'de' MMMM", { locale: es })
+                                            const isAprobado = pago.estado === 'aprobado'
+                                            const isPendiente = pago.estado === 'en_revision' || pago.estado === 'pendiente'
+                                            const isRechazado = pago.estado === 'rechazado'
+
+                                            return (
+                                                <div key={pago.id} className="relative flex gap-4 pb-5">
+                                                    {/* Node */}
+                                                    <div className={`relative z-10 w-4 h-4 rounded-full border-2 border-white shadow-sm mt-1 shrink-0 ${isAprobado ? 'bg-emerald-500' : isPendiente ? 'bg-amber-400' : 'bg-red-400'}`}></div>
+
+                                                    {/* Card */}
+                                                    <div className="flex-1 bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                {isAprobado && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                                                {isPendiente && <Clock className="w-4 h-4 text-amber-500 shrink-0" />}
+                                                                {isRechazado && <XCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                                                                <h3 className="font-bold text-slate-900 text-sm capitalize leading-tight">{mesRecibo}</h3>
+                                                            </div>
+                                                            <span className="font-black text-slate-900 text-base shrink-0">${Number(pago.monto_equivalente_usd).toFixed(2)}</span>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="text-[10px] text-slate-400 font-medium">
+                                                                {pago.banco_origen} · {formatFecha}
+                                                            </p>
+                                                            {isAprobado && <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wider uppercase">Aprobado</span>}
+                                                            {isPendiente && <span className="bg-amber-100 text-amber-700 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wider uppercase">Pendiente</span>}
+                                                            {isRechazado && <span className="bg-red-100 text-red-700 text-[9px] font-black px-1.5 py-0.5 rounded-full tracking-wider uppercase">Rechazado</span>}
+                                                        </div>
+
+                                                        {pago.referencia && (
+                                                            <p className="text-[10px] text-slate-300 font-mono mt-1">Ref: {pago.referencia}</p>
+                                                        )}
+
+                                                        {isRechazado && pago.nota_admin && (
+                                                            <div className="mt-3 bg-red-50 text-red-700 text-xs p-2.5 rounded-lg border border-red-100">
+                                                                <span className="font-bold">Motivo: </span>{pago.nota_admin}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-
             </div>
 
-            {/* Botón Flotante Inferior (Reportar Nuevo) */}
+            {/* Botón Flotante Inferior */}
             <div className="fixed bottom-[85px] md:static md:mt-8 left-0 right-0 max-w-md md:max-w-none mx-auto px-5 md:px-0 z-40 flex md:justify-end">
                 <Link href="/dashboard/propietario/pagos/nuevo" className="w-full md:w-auto md:px-12 bg-[#1e3a8a] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-900 transition-colors active:scale-95 flex items-center justify-center cursor-pointer">
                     Reportar Nuevo Pago

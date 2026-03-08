@@ -1,4 +1,4 @@
-import { CheckCircle2, FileText, Download, Banknote, ChevronRight, Megaphone, Pin } from 'lucide-react'
+import { CheckCircle2, FileText, Download, Banknote, ChevronRight, Megaphone, Pin, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -8,6 +8,8 @@ import { es } from 'date-fns/locale'
 import NotificacionesWidget from '@/components/NotificacionesWidget'
 import GastosTransparenciaWidget from '@/components/GastosTransparenciaWidget'
 import TutorialResidentWidget from '@/components/TutorialResidentWidget'
+
+export const dynamic = 'force-dynamic'
 
 export default async function PropietarioDashboardPage() {
     const supabase = await createClient()
@@ -37,6 +39,28 @@ export default async function PropietarioDashboardPage() {
     const condominioInfo = perfil.condominios as any
     const nombreCondominio = condominioInfo?.nombre || 'Mi Condominio'
 
+    // Calcular saldo pendiente real (en tiempo real, no desde estado_solvencia estático)
+    const { data: inmuebles } = await supabase
+        .from('inmuebles')
+        .select('id')
+        .eq('propietario_id', perfilId)
+
+    const inmueblesIds = inmuebles?.map(i => i.id) || []
+    let saldoPendienteUsd = 0
+
+    if (inmueblesIds.length > 0) {
+        const { data: recibos } = await supabase
+            .from('recibos_cobro')
+            .select('monto_usd, monto_pagado_usd')
+            .in('inmueble_id', inmueblesIds)
+            .neq('estado', 'pagado')
+
+        saldoPendienteUsd = recibos?.reduce((acc, r) =>
+            acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0) || 0
+    }
+
+    const isSolvente = saldoPendienteUsd <= 0
+
     // Cargar Feed de Anuncios
     const { data: anuncios } = await supabase
         .from('cartelera_anuncios')
@@ -44,7 +68,7 @@ export default async function PropietarioDashboardPage() {
         .eq('condominio_id', perfil.condominio_id)
         .order('fijado', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(10) // Mostrar últimos 10
+        .limit(10)
 
     const categoryColors: Record<string, string> = {
         'Urgente': 'bg-red-100 text-red-700 border-red-200',
@@ -63,8 +87,8 @@ export default async function PropietarioDashboardPage() {
         .eq('perfil_id', perfilId)
         .eq('leida', false)
 
-    // Obtener Tasa BCV Oficial para mostrarla en el Dashboard
-    let tasaBcv = null;
+    // Obtener Tasa BCV Oficial
+    let tasaBcv: number | null = null;
     try {
         const resBcv = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { next: { revalidate: 3600 } })
         if (resBcv.ok) {
@@ -83,7 +107,7 @@ export default async function PropietarioDashboardPage() {
 
     return (
         <div className="relative">
-            {/* Header - En la parte superior de la página (scrollable) */}
+            {/* Header */}
             <div className="relative z-50">
                 <div className="bg-[#1e3a8a] text-white pt-10 pb-12 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden">
                     <div className="relative z-10">
@@ -100,15 +124,16 @@ export default async function PropietarioDashboardPage() {
                             <NotificacionesWidget count={unreadCount || 0} href="/dashboard/propietario/notificaciones" theme="dark" />
                         </div>
 
-                        {perfil.estado_solvencia ? (
+                        {/* Badge de Solvencia Real */}
+                        {isSolvente ? (
                             <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/50 text-emerald-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
                                 <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
-                                ESTADO: SOLVENTE
+                                ESTADO: SOLVENTE ✓
                             </div>
                         ) : (
                             <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-500/50 text-red-50 px-3 py-1.5 rounded-full text-xs font-bold tracking-wider">
-                                <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                                ESTADO: DEUDA
+                                <AlertTriangle className="w-4 h-4 text-red-300" />
+                                DEUDA: ${saldoPendienteUsd.toFixed(2)}
                             </div>
                         )}
                     </div>
@@ -125,12 +150,18 @@ export default async function PropietarioDashboardPage() {
                     <div className="flex justify-between items-start mb-6">
                         <div className="flex-1">
                             <p className="text-[10px] text-slate-400 font-medium mb-1">SALDO PENDIENTE (USD)</p>
-                            <p className="text-3xl font-bold text-[#1e3a8a]">$0.00</p>
+                            <p className={`text-3xl font-bold ${isSolvente ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {isSolvente ? '$0.00' : `$${saldoPendienteUsd.toFixed(2)}`}
+                            </p>
                         </div>
                         <div className="w-px h-12 bg-slate-100 mx-4 self-center"></div>
                         <div className="flex-1">
                             <p className="text-[10px] text-slate-400 font-medium mb-1">SALDO PENDIENTE (BS)</p>
-                            <p className="text-2xl font-bold text-slate-900 mt-1">Bs. 0,00</p>
+                            <p className="text-2xl font-bold text-slate-900 mt-1">
+                                {tasaBcv
+                                    ? `Bs. ${(saldoPendienteUsd * tasaBcv).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : 'Bs. —'}
+                            </p>
                         </div>
                     </div>
 
@@ -142,13 +173,13 @@ export default async function PropietarioDashboardPage() {
                         ) : (
                             <p className="text-xs text-slate-400 font-medium">Tasa BCV no disponible</p>
                         )}
-                        <Link href="/dashboard/propietario/pagos/nuevo" className="text-xs font-bold text-[#1e3a8a] flex items-center gap-1 hover:underline">
+                        <Link href="/dashboard/propietario/pagos" className="text-xs font-bold text-[#1e3a8a] flex items-center gap-1 hover:underline">
                             Ver Recibos <ChevronRight className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
 
-                {/* Action Button: Reportar Pago (Vinculado) */}
+                {/* Action Button: Reportar Pago */}
                 <Link
                     href="/dashboard/propietario/pagos/nuevo"
                     className="w-full bg-[#1e3a8a] hover:bg-blue-900 text-white rounded-xl py-4 px-6 flex items-center justify-center gap-3 font-semibold shadow-sm transition-colors"
@@ -163,7 +194,7 @@ export default async function PropietarioDashboardPage() {
                 {/* Gastos: Transparencia */}
                 <GastosTransparenciaWidget egresos={egresos || []} />
 
-                {/* Cartelera Virtual (Lista de Anuncios) */}
+                {/* Cartelera Virtual */}
                 <div id="muro-vecinal" className="pt-2 scroll-mt-24">
                     <div className="flex justify-between items-end mb-3 px-1">
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -209,7 +240,7 @@ export default async function PropietarioDashboardPage() {
                 </div>
 
             </div>
-        </div >
+        </div>
     )
 }
 

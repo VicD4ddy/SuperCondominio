@@ -27,7 +27,7 @@ export async function crearEgresoAction(formData: FormData) {
         // 3. Subir Imagen si existe
         if (imagen && imagen.size > 0) {
             const fileExt = imagen.name.split('.').pop() || 'jpg'
-            const fileName = `egreso-${Date.now()}-${adminPerfil.condominio_id}.${fileExt}`
+            const fileName = `egreso-${Date.now()}-global.${fileExt}`
 
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('documentos')
@@ -53,8 +53,7 @@ export async function crearEgresoAction(formData: FormData) {
         const { error } = await supabase
             .from('egresos')
             .insert({
-                condominio_id: adminPerfil.condominio_id,
-                descripcion,
+                    descripcion,
                 monto_usd: parseFloat(montoUsd),
                 fecha_gasto: fecha,
                 categoria,

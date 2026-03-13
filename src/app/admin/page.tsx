@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { login } from './actions'
 import { useFormStatus } from 'react-dom'
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 function SubmitButton() {
     const { pending } = useFormStatus()
@@ -12,9 +13,9 @@ function SubmitButton() {
         <button
             type="submit"
             disabled={pending}
-            className="w-full bg-[#1e3a8a] text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-900 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-50 transition-all shadow-lg shadow-blue-900/10"
+            className="w-full bg-slate-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-black focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:opacity-50 transition-all shadow-lg shadow-slate-900/20"
         >
-            {pending ? 'Ingresando...' : 'Iniciar Sesión'}
+            {pending ? 'Ingresando...' : 'Iniciar Sesión Administrativa'}
         </button>
     )
 }
@@ -36,17 +37,26 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-            <div className="max-w-md w-full p-8 bg-white rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden">
-                {/* Decoración superior */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-[#1e3a8a]" />
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 relative">
+            
+            {/* Botón para volver */}
+            <Link href="/" className="absolute top-6 left-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 hover:shadow">
+                <ArrowLeft className="w-4 h-4" />
+                Acceso Residentes
+            </Link>
 
-                <div className="text-center mb-10">
-                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-[#1e3a8a]">
-                        <Building2 className="w-8 h-8" />
+            <div className="max-w-md w-full p-8 bg-white rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden mt-12 md:mt-0">
+                {/* Decoración superior */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-slate-700 to-slate-900" />
+
+                <div className="text-center mb-10 mt-2">
+                    <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-5 text-white shadow-lg shadow-slate-900/20 border-4 border-slate-50">
+                        <ShieldCheck className="w-10 h-10" />
                     </div>
-                    <h1 className="text-3xl font-black text-[#1e3a8a] tracking-tight">SuperCondominio</h1>
-                    <p className="text-slate-500 mt-2 font-semibold">Gestión inteligente de tu comunidad</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">SuperCondominio</h1>
+                    <div className="inline-flex mt-3 items-center px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-widest shadow-sm">
+                        Portal Administrativo
+                    </div>
                 </div>
 
                 <form action={handleSubmit} className="space-y-6">

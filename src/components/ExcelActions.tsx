@@ -7,7 +7,11 @@ import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { getReporteAnualAction, importRecibosExcelAction } from '@/app/dashboard/admin/finanzas/actions'
 
-export default function ExcelActions() {
+interface ExcelActionsProps {
+    condominioName?: string;
+}
+
+export default function ExcelActions({ condominioName = 'Condominio' }: ExcelActionsProps) {
     const [loading, setLoading] = useState(false)
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -136,7 +140,9 @@ export default function ExcelActions() {
             // Generar y descargar
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, `Reporte_Anual_${new Date().getFullYear()}.xlsx`);
+            
+            const safeCondoName = condominioName.replace(/[^a-zA-Z0-9]/g, '_');
+            saveAs(blob, `RegistroAnual_${safeCondoName}_${new Date().getFullYear()}.xlsx`);
 
             setStatus({ type: 'success', message: 'Excel Premium exportado correctamente.' });
         } catch (err: any) {

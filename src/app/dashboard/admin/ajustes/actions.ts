@@ -6,19 +6,19 @@ import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function guardarAnuncioAction(formData: FormData) {
     try {
-        const { user, profile: adminPerfil } = await getAdminProfile()
+        const { user, profile: adminPerfil, config } = await getAdminProfile()
         const supabase = await createClient()
 
-        if (!user || !adminPerfil) return { error: 'No autorizado o perfil de admin no encontrado' }
+        if (!user || !adminPerfil || !config) return { error: 'No autorizado o perfil de admin no encontrado' }
 
         const nuevoAnuncio = formData.get('anuncio') as string
         const textoLimpio = nuevoAnuncio?.trim() || null // Si envía vacío, limpiamos el tablón
 
-        // 2. Actualizar Tabla Condominios
+        // 2. Actualizar Tabla configuracion_global
         const { data, error } = await supabase
-            .from('condominios')
+            .from('configuracion_global')
             .update({ anuncio_tablon: textoLimpio })
-            .eq('id', adminPerfil.condominio_id)
+            .eq('id', config.id)
             .select()
 
         if (error) {
@@ -41,18 +41,18 @@ export async function guardarAnuncioAction(formData: FormData) {
 
 export async function guardarCuentasAction(cuentasJson: any[]) {
     try {
-        const { user, profile: adminPerfil } = await getAdminProfile()
+        const { user, profile: adminPerfil, config } = await getAdminProfile()
         const supabase = await createClient()
 
-        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
+        if (!user || !adminPerfil || !config) return { error: 'No autorizado o perfil no encontrado' }
 
-        console.log('DEBUG: Guardando cuentas para condominio', adminPerfil.condominio_id)
+        console.log('DEBUG: Guardando cuentas globales')
         console.log('DEBUG: JSON:', JSON.stringify(cuentasJson))
 
         const { data, error } = await supabase
-            .from('condominios')
+            .from('configuracion_global')
             .update({ cuentas_bancarias: cuentasJson })
-            .eq('id', adminPerfil.condominio_id)
+            .eq('id', config.id)
             .select()
 
         if (error) {
@@ -76,10 +76,10 @@ export async function guardarCuentasAction(cuentasJson: any[]) {
 
 export async function subirCartaResidenciaAction(formData: FormData) {
     try {
-        const { user, profile: adminPerfil } = await getAdminProfile()
+        const { user, profile: adminPerfil, config } = await getAdminProfile()
         const supabase = await createClient()
 
-        if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
+        if (!user || !adminPerfil || !config) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
         // 2. Extraer archivo
         const archivo = formData.get('documento') as File
@@ -89,8 +89,8 @@ export async function subirCartaResidenciaAction(formData: FormData) {
 
         // 3. Subir archivo a Storage (documentos)
         const fileExt = archivo.name.split('.').pop()
-        // Usamos el ID del condominio para que sobrescriba el viejo y no acumule basura
-        const fileName = `carta-residencia-${adminPerfil.condominio_id}.${fileExt}`
+        // Usamos genérico "global" en un solo inquilino
+        const fileName = `carta-residencia-global.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
             .from('documentos')
@@ -111,11 +111,11 @@ export async function subirCartaResidenciaAction(formData: FormData) {
 
         const fileUrl = publicUrlData.publicUrl
 
-        // 5. Insertar URL en condominios
+        // 5. Insertar URL en configuracion_global
         const { error: updateError } = await supabase
-            .from('condominios')
+            .from('configuracion_global')
             .update({ carta_residencia_url: fileUrl })
-            .eq('id', adminPerfil.condominio_id)
+            .eq('id', config.id)
 
         if (updateError) {
             console.error(updateError)

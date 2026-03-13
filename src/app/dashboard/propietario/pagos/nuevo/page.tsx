@@ -12,17 +12,14 @@ export default async function NuevoPagoPageServer() {
         redirect('/dashboard/propietario/validar')
     }
 
-    // Obtener las Cuentas Bancarias del Condominio y su Anuncio/Tasa (Si las requieres)
-    const { data: perfil } = await supabase
-        .from('perfiles')
-        .select(`
-            condominios:condominio_id ( cuentas_bancarias )
-        `)
-        .eq('id', perfilId)
+    // Obtener las Cuentas Bancarias
+    const { data: config } = await supabase
+        .from('configuracion_global')
+        .select('cuentas_bancarias')
+        .limit(1)
         .single()
 
-    const condominioInfo = perfil?.condominios as any
-    const cuentas = condominioInfo?.cuentas_bancarias || []
+    const cuentas = (config?.cuentas_bancarias as any[]) || []
 
     return <NuevoPagoClient cuentasCondominio={cuentas} />
 }

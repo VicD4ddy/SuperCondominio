@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import ReceiptDownloadButton from '@/components/ReceiptDownloadButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,7 +156,26 @@ export default async function PagosPropietarioPage() {
                                                         </div>
 
                                                         {pago.referencia && (
-                                                            <p className="text-[10px] text-slate-300 font-mono mt-1">Ref: {pago.referencia}</p>
+                                                            <div className="flex justify-between items-center mt-1">
+                                                                <p className="text-[10px] text-slate-300 font-mono">Ref: {pago.referencia}</p>
+                                                                {isAprobado && (
+                                                                    <ReceiptDownloadButton
+                                                                        data={{
+                                                                            receiptNumber: pago.id.toString(),
+                                                                            propietarioName: pago.perfiles?.nombres + ' ' + (pago.perfiles?.apellidos || ''), // We might need to fetch this if missing, but typically mapped later
+                                                                            concepto: mesRecibo,
+                                                                            casaApto: 'Asignado',
+                                                                            puestoAdicional: false,
+                                                                            montoGlobal: `${Number(pago.monto_equivalente_usd).toFixed(2)} USD`,
+                                                                            fecha: new Date(pago.fecha_pago),
+                                                                            formaDePago: pago.banco_origen || 'Depósito/Transf',
+                                                                            referencia: pago.referencia,
+                                                                            realizadoPor: 'Administración / Sistema',
+                                                                            condominioName: 'CONJUNTO RESIDENCIAL' // Ideally fetched from DB
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </div>
                                                         )}
 
                                                         {isRechazado && pago.nota_admin && (

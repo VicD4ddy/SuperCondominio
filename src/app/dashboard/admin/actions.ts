@@ -81,7 +81,6 @@ export async function aprobarPagoAction(pagoId: string) {
 
         // --- NOTIFICACIÓN AL PROPIETARIO ---
         await supabase.from('notificaciones').insert({
-            condominio_id: pago.condominio_id,
             perfil_id: pago.perfil_id,
             tipo: 'pago_aprobado',
             titulo: 'Pago Aprobado',
@@ -102,7 +101,7 @@ export async function rechazarPagoAction(pagoId: string, nota?: string) {
 
         const { data: pago } = await supabase
             .from('pagos_reportados')
-            .select('condominio_id, perfil_id, referencia, monto_bs')
+            .select('perfil_id, referencia, monto_bs')
             .eq('id', pagoId)
             .single()
 
@@ -124,7 +123,6 @@ export async function rechazarPagoAction(pagoId: string, nota?: string) {
 
         // --- NOTIFICACIÓN AL PROPIETARIO ---
         await supabase.from('notificaciones').insert({
-            condominio_id: pago.condominio_id,
             perfil_id: pago.perfil_id,
             tipo: 'pago_rechazado',
             titulo: 'Pago Rechazado',

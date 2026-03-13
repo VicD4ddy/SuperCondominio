@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, Ticket, User, Megaphone } from 'lucide-react'
+import { Home, CreditCard, Ticket, User, History } from 'lucide-react'
 
 export default function PropietarioBottomNav() {
     const pathname = usePathname()
@@ -21,10 +21,10 @@ export default function PropietarioBottomNav() {
             isActive: pathname.startsWith('/dashboard/propietario/pagos')
         },
         {
-            name: 'Muro',
-            href: '/dashboard/propietario#muro-vecinal',
-            icon: Megaphone,
-            isActive: false // Al ser un ancla, no lo marcamos activo de forma persistente
+            name: 'Historial',
+            href: '/dashboard/propietario/historial',
+            icon: History,
+            isActive: pathname.startsWith('/dashboard/propietario/historial')
         },
         {
             name: 'Perfil',

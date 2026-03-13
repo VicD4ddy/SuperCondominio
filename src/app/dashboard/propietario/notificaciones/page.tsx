@@ -19,19 +19,10 @@ export default async function PropietarioNotificacionesPage() {
         redirect('/dashboard/propietario/validar')
     }
 
-    const { data: perfil } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('id', perfilId)
-        .single()
-
-    if (!perfil) redirect('/dashboard/propietario/validar')
-
-    // Cargar notificaciones
+    // Cargar notificaciones del propietario
     const { data: notificaciones } = await supabase
         .from('notificaciones')
         .select('*')
-        .eq('condominio_id', perfil.condominio_id)
         .eq('perfil_id', perfilId)
         .order('created_at', { ascending: false })
 
@@ -53,7 +44,7 @@ export default async function PropietarioNotificacionesPage() {
             <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <NotificacionesClientList
                     initialNotificaciones={notificaciones || []}
-                    condominioId={perfil.condominio_id}
+
                     perfilId={perfilId}
                 />
             </main>

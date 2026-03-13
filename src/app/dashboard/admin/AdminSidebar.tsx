@@ -28,12 +28,6 @@ export default function AdminSidebar() {
             isActive: pathname.startsWith('/dashboard/admin/vecinos')
         },
         {
-            name: 'Cartelera',
-            href: '/dashboard/admin/anuncios',
-            icon: Megaphone,
-            isActive: pathname.startsWith('/dashboard/admin/anuncios')
-        },
-        {
             name: 'Historial',
             href: '/dashboard/admin/logs',
             icon: History,

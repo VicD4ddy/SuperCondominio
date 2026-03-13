@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { Users, Building, Mail, Phone, ArrowLeft, UserPlus, Home } from 'lucide-react'
+import { Users, Building, Mail, Phone, ArrowLeft, UserPlus, Home, CreditCard } from 'lucide-react'
 import VecinoActions from './VecinoActions'
 import InmuebleEditableInfo from './InmuebleEditableInfo'
 import RegistroMasivoVecinos from './RegistroMasivoVecinos'
@@ -13,7 +13,7 @@ export default async function AdminVecinosPage() {
     if (!user) {
         return (
             <div className="p-5 text-center text-slate-500">
-                Sesión no iniciada. <Link href="/login" className="text-blue-600 underline">Ir al Login</Link>
+                Sesión no iniciada. <Link href="/admin" className="text-blue-600 underline">Ir al Login</Link>
             </div>
         )
     }
@@ -32,11 +32,11 @@ export default async function AdminVecinosPage() {
                 id,
                 nombres,
                 apellidos,
+                cedula,
                 telefono,
                 auth_user_id 
             )
         `)
-        .eq('condominio_id', adminPerfil.condominio_id)
         .order('identificador', { ascending: true })
 
     if (error) {
@@ -100,15 +100,23 @@ export default async function AdminVecinosPage() {
 
                                     {prop ? (
                                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 group relative mb-4">
-                                            <p className="font-bold text-slate-800 mb-1 flex items-center gap-2">
+                                            <p className="font-bold text-slate-800 mb-2 flex items-center gap-2">
                                                 {prop.nombres} {prop.apellidos}
                                             </p>
 
-                                            {prop.telefono && (
-                                                <p className="text-xs text-slate-500 flex items-center gap-2">
-                                                    <Phone className="w-3 h-3" /> {prop.telefono}
-                                                </p>
-                                            )}
+                                            <div className="flex flex-col gap-1">
+                                                {prop.cedula && (
+                                                    <p className="text-xs font-bold text-[#1e3a8a] flex items-center gap-2">
+                                                        <CreditCard className="w-3 h-3" /> {prop.cedula}
+                                                    </p>
+                                                )}
+
+                                                {prop.telefono && (
+                                                    <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                                                        <Phone className="w-3 h-3" /> {prop.telefono}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="bg-red-50/50 p-4 rounded-xl border border-red-100 text-red-600 text-[11px] font-bold uppercase tracking-wide flex items-center gap-2 mb-4">

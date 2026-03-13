@@ -28,9 +28,10 @@ interface ReporteProps {
     data: ReporteItem[]
     dataAnual?: any[]
     tasaBcv: number
+    condominioName?: string
 }
 
-export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv }: ReporteProps) {
+export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv, condominioName = 'Condominio' }: ReporteProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'Solvente' | 'Moroso' | 'Gracia'>('Todos')
     const [activeTab, setActiveTab] = useState<'resumen' | 'matriz'>('resumen')
@@ -80,7 +81,9 @@ export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv 
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            saveAs(blob, `Plantilla_Cuentas_SuperCondominio.xlsx`);
+            
+            const safeCondoName = condominioName.replace(/[^a-zA-Z0-9]/g, '_');
+            saveAs(blob, `Plantilla_Cuentas_${safeCondoName}.xlsx`);
         } catch (error) {
             console.error("Error generating Excel template:", error);
             alert("Error al generar la plantilla Excel.");
@@ -358,7 +361,7 @@ export default function ReporteCuentasPorCobrar({ data, dataAnual = [], tasaBcv 
                                         ) : (
                                             <Download className="w-4 h-4" />
                                         )}
-                                        {downloadingTemplate ? 'Generando Plantilla...' : 'Descargar Plantilla de Ejemplo'}
+                                        {downloadingTemplate ? 'Generando Plantilla...' : 'Descargar Plantilla de Cuentas por Cobrar'}
                                     </button>
                                 </div>
                             ) : (

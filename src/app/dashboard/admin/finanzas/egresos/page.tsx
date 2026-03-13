@@ -21,7 +21,6 @@ export default async function AdminEgresosPage() {
     const { data: egresos } = await supabase
         .from('egresos')
         .select('*')
-        .eq('condominio_id', adminPerfil.condominio_id)
         .order('fecha_gasto', { ascending: false })
 
     const totalEgresos = egresos?.reduce((acc, curr) => acc + Number(curr.monto_usd), 0) || 0

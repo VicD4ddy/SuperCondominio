@@ -1,7 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { Settings, LogOut, User, Building } from 'lucide-react'
-import TablonCard from './TablonCard'
 import CuentasCard from './CuentasCard'
 import TasaBcvWidget from './TasaBcvWidget'
 import CartaResidenciaCard from './CartaResidenciaCard'
@@ -17,7 +16,7 @@ export default async function AdminAjustesPage() {
     if (!user) {
         return (
             <div className="p-5 text-center text-slate-500">
-                Sesión no iniciada. <Link href="/login" className="text-blue-600 underline">Ir al Login</Link>
+                Sesión no iniciada. <Link href="/admin" className="text-blue-600 underline">Ir al Login</Link>
             </div>
         )
     }
@@ -26,14 +25,8 @@ export default async function AdminAjustesPage() {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
     }
 
-    const condoData = adminPerfil?.condominios as any;
-
-    console.log('--- DIAGNÓSTICO DE AJUSTES ---')
-    console.log('User Auth ID:', user.id)
-    console.log('Perfil ID:', adminPerfil.id)
-    console.log('Condominio ID:', adminPerfil.condominio_id)
-    console.log('Condominio Encontrado:', condoData ? 'SÍ' : 'NO')
-    console.log('Cuentas en DB:', JSON.stringify(condoData?.cuentas_bancarias))
+    const { data: configRows } = await supabase.from('configuracion_global').select('*').limit(1);
+    const globalConfig = configRows?.[0];
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
@@ -41,7 +34,6 @@ export default async function AdminAjustesPage() {
             <header className="px-5 py-6 bg-white border-b border-slate-200 sticky top-0 z-40">
                 <h1 className="text-2xl font-bold text-[#1e3a8a]">Ajustes de Perfil</h1>
                 <p className="text-slate-500 text-sm mt-1">Configuración Administrativa</p>
-                <div className="text-[10px] text-slate-300 pointer-events-none">ID: {adminPerfil.condominio_id}</div>
             </header>
 
             <div className="p-5 space-y-6">
@@ -64,20 +56,18 @@ export default async function AdminAjustesPage() {
                 </div>
 
                 {/* Condominio Card */}
-                <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center">
-                            <Building className="w-5 h-5" />
+                <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+                            <Building className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">CONDOMINIO ADMINISTRADO</p>
+                            <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">CONFIGURACIÓN GLOBAL</p>
                             <h3 className="font-bold text-slate-800 text-lg">
-                                {condoData?.nombre || 'Condominio Central'}
+                                {globalConfig?.nombre || 'Nombre no configurado'}
                             </h3>
                         </div>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-600 leading-relaxed font-medium">
-                        {condoData?.direccion || 'Dirección no configurada'}
                     </div>
                 </div>
 
@@ -90,14 +80,12 @@ export default async function AdminAjustesPage() {
                     {/* Tasa BCV Oficial */}
                     <TasaBcvWidget />
 
-                    {/* Tablón de Anuncios */}
-                    <TablonCard anuncioActual={condoData?.anuncio_tablon || null} />
 
                     {/* Carta de Residencia */}
-                    <CartaResidenciaCard urlActual={condoData?.carta_residencia_url || null} />
+                    <CartaResidenciaCard urlActual={globalConfig?.carta_residencia_url || null} />
 
                     {/* Cuentas Bancarias */}
-                    <CuentasCard cuentasIniciales={condoData?.cuentas_bancarias || []} />
+                    <CuentasCard cuentasIniciales={globalConfig?.cuentas_bancarias || []} />
                 </div>
                 {/* --------------------------------------------------- */}
 

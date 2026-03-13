@@ -7,6 +7,9 @@ import CaptureViewer from './CaptureViewer'
 import NotificacionesWidget from '@/components/NotificacionesWidget'
 import RejectionForm from './RejectionForm'
 import { getAdminProfile } from '@/utils/supabase/admin-helper'
+import ReceiptDownloadButton from '@/components/ReceiptDownloadButton'
+import ExportadorExcelButton from './finanzas/ExportadorExcelButton'
+import FiltroPagos from './FiltroPagos'
 
 export default async function AdminDashboardPage({
     searchParams
@@ -19,7 +22,7 @@ export default async function AdminDashboardPage({
     if (!user) {
         return (
             <div className="p-5 text-center text-slate-500">
-                Sesión no iniciada. <Link href="/login" className="text-blue-600 underline">Ir al Login</Link>
+                Sesión no iniciada. <Link href="/admin" className="text-blue-600 underline">Ir al Login</Link>
             </div>
         )
     }
@@ -33,17 +36,14 @@ export default async function AdminDashboardPage({
     const verPagoId = resolvedParams?.ver_pago;
 
     const condominioData = adminPerfil?.condominios as {
-        anuncio_tablon?: string | null
         cuentas_bancarias?: unknown
         nombre?: string | null
     } | null
-    const anuncioTablon = condominioData?.anuncio_tablon;
 
     // Contar notificaciones no leídas para Admin
     const { count: unreadAdminCount } = await supabase
         .from('notificaciones')
         .select('*', { count: 'exact', head: true })
-        .eq('condominio_id', adminPerfil.condominio_id)
         .is('perfil_id', null)
         .eq('leida', false)
 
@@ -58,7 +58,6 @@ export default async function AdminDashboardPage({
                 inmuebles ( identificador )
             )
         `)
-        .eq('condominio_id', adminPerfil.condominio_id)
         .eq('estado', 'en_revision')
         .order('created_at', { ascending: false })
 
@@ -70,7 +69,6 @@ export default async function AdminDashboardPage({
     const { data: recibos } = await supabase
         .from('recibos_cobro')
         .select('monto_usd, monto_pagado_usd, estado')
-        .eq('condominio_id', adminPerfil.condominio_id)
 
     let totalEmitido = 0;
     let totalRecaudado = 0;
@@ -95,7 +93,6 @@ export default async function AdminDashboardPage({
     const { data: recibosMes } = await supabase
         .from('recibos_cobro')
         .select('monto_usd, monto_pagado_usd, estado')
-        .eq('condominio_id', adminPerfil.condominio_id)
         .gte('fecha_emision', monthStartStr)
         .lt('fecha_emision', nextMonthStartStr)
 
@@ -116,7 +113,6 @@ export default async function AdminDashboardPage({
     const { data: egresosMes } = await supabase
         .from('egresos')
         .select('monto_usd')
-        .eq('condominio_id', adminPerfil.condominio_id)
         .gte('fecha_gasto', monthStartStr)
         .lt('fecha_gasto', nextMonthStartStr)
 
@@ -126,20 +122,17 @@ export default async function AdminDashboardPage({
     const { count: ticketsAbiertosCount } = await supabase
         .from('tickets_soporte')
         .select('*', { count: 'exact', head: true })
-        .eq('condominio_id', adminPerfil.condominio_id)
         .eq('estado', 'abierto')
 
     const { data: inmueblesData } = await supabase
         .from('inmuebles')
         .select('propietario_id')
-        .eq('condominio_id', adminPerfil.condominio_id)
 
     const inmueblesSinPropietario = (inmueblesData || []).filter(i => !i.propietario_id).length
 
     const { data: bitacoraLogs } = await supabase
         .from('logs_sistema')
         .select('id, evento, detalles, created_at, perfiles(nombres, apellidos)')
-        .eq('condominio_id', adminPerfil.condominio_id)
         .order('created_at', { ascending: false })
         .limit(8)
 
@@ -185,7 +178,6 @@ export default async function AdminDashboardPage({
     const alerts: { title: string; detail: string; href?: string }[] = []
     if (totalPendientes > 0) alerts.push({ title: 'Pagos por conciliar', detail: `Tienes ${totalPendientes} pago(s) en revisión.`, href: '/dashboard/admin' })
     if ((ticketsAbiertosCount || 0) > 0) alerts.push({ title: 'Soporte pendiente', detail: `${ticketsAbiertosCount} ticket(s) abierto(s).`, href: '/dashboard/admin/soporte' })
-    if (inmueblesSinPropietario > 0) alerts.push({ title: 'Inmuebles sin propietario', detail: `${inmueblesSinPropietario} inmueble(s) sin asignación.`, href: '/dashboard/admin/vecinos' })
     if (!tieneCuentasBancarias) alerts.push({ title: 'Cuentas bancarias', detail: 'No hay cuentas bancarias configuradas.', href: '/dashboard/admin/ajustes' })
     if (!tasaBcvRegistradaHoy) alerts.push({ title: 'Tasa BCV', detail: 'No hay una tasa registrada para hoy en el sistema.', href: '/dashboard/admin/ajustes' })
 
@@ -199,7 +191,7 @@ export default async function AdminDashboardPage({
     let tendencia6m: RecaudacionMensualRow[] = []
     try {
         const { data: tendenciaData } = await supabase
-            .rpc('get_recaudacion_mensual', { condo_id: adminPerfil.condominio_id, months: 6 })
+            .rpc('get_recaudacion_mensual', { months: 6 })
 
         tendencia6m = (tendenciaData as RecaudacionMensualRow[] | null) || []
     } catch (e) {
@@ -261,11 +253,30 @@ export default async function AdminDashboardPage({
                             </div>
 
                             {/* Comprobante */}
-                            <div className="flex justify-center my-6">
+                            <div className="flex justify-center my-6 relative">
                                 <CaptureViewer url={pagoSeleccionado.capture_url} referencia={pagoSeleccionado.referencia} />
+                                {pagoSeleccionado.estado === 'aprobado' && (
+                                    <div className="absolute -bottom-8 right-0">
+                                        <ReceiptDownloadButton
+                                            data={{
+                                                receiptNumber: pagoSeleccionado.id.toString(),
+                                                propietarioName: pagoSeleccionado.perfiles?.nombres + ' ' + (pagoSeleccionado.perfiles?.apellidos || ''),
+                                                concepto: 'Abono / Cuota (Verificado por Admin)',
+                                                casaApto: 'Asignado',
+                                                puestoAdicional: false,
+                                                montoGlobal: `${Number(pagoSeleccionado.monto_equivalente_usd).toFixed(2)} USD`,
+                                                fecha: new Date(pagoSeleccionado.fecha_pago || pagoSeleccionado.created_at),
+                                                formaDePago: pagoSeleccionado.banco_origen || 'Depósito',
+                                                referencia: pagoSeleccionado.referencia,
+                                                realizadoPor: adminPerfil?.nombres || 'Administrador',
+                                                condominioName: condominioData?.nombre || 'Condominio'
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
-                            <p className="text-xs text-center font-medium text-slate-500 pb-2">Verifique minuciosamente la referencia en el banco.</p>
+                            <p className="text-xs text-center font-medium text-slate-500 pb-2 mt-4">Verifique minuciosamente la referencia en el banco.</p>
 
                             {/* Acciones */}
                             <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
@@ -331,34 +342,6 @@ export default async function AdminDashboardPage({
 
                 <div className="space-y-6 max-w-7xl mx-auto">
 
-                    {/* === BANNER DE ANUNCIO DESTACADO (NUEVO) === */}
-                    {anuncioTablon && (
-                        <div className="bg-gradient-to-r from-[#1e3a8a] to-blue-900 rounded-2xl p-6 shadow-xl border border-blue-400/30 relative overflow-hidden group">
-                            {/* Decoración de fondo */}
-                            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
-
-                            <div className="flex items-center justify-between relative z-10">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                                        <Megaphone className="w-7 h-7" />
-                                    </div>
-                                    <div className="max-w-2xl">
-                                        <h2 className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Comunicado Oficial</h2>
-                                        <p className="text-white text-lg font-bold leading-relaxed">
-                                            {anuncioTablon}
-                                        </p>
-                                    </div>
-                                </div>
-                                <Link
-                                    href="/dashboard/admin/anuncios"
-                                    className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-white/20 backdrop-blur-sm transition-all group-hover:shadow-lg flex items-center gap-2"
-                                >
-                                    Editar Cartelera
-                                </Link>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Título y Acciones Macro */}
                     <div className="flex items-end justify-between gap-4">
                         <div>
@@ -366,9 +349,7 @@ export default async function AdminDashboardPage({
                             <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">Estado en tiempo real de la gestión administrativa para <span className="italic font-bold text-slate-700">"{condominioData?.nombre}"</span></p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 hover:shadow-md flex items-center gap-2 transition-all">
-                                <Download className="w-4 h-4" /> Exportar Datos
-                            </button>
+                            <ExportadorExcelButton />
                             <Link href="/dashboard/admin/emitir-cobro" className="bg-[#1e3a8a] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-900 hover:shadow-md flex items-center gap-2 transition-all">
                                 <Plus className="w-4 h-4" /> Cuota Especial
                             </Link>
@@ -434,20 +415,6 @@ export default async function AdminDashboardPage({
                             <p className="text-sm text-slate-400 font-medium mt-1">Emitido: ${totalEmitidoMes.toLocaleString('en-US', { minimumFractionDigits: 2 })} • Pendiente: ${totalPendienteMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                         </div>
 
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all cursor-default">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${saldoNetoMes >= 0 ? 'bg-blue-50 text-[#1e3a8a] border-blue-100' : 'bg-orange-50 text-orange-500 border-orange-100'}`}>
-                                    <FileText className="w-6 h-6" />
-                                </div>
-                                <span className={`text-[10px] font-bold px-2 py-1.5 rounded-md border ${saldoNetoMes >= 0 ? 'bg-blue-50 text-[#1e3a8a] border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>Saldo</span>
-                            </div>
-                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Saldo Neto (Mes)</p>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">${saldoNetoMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1">Egresos: ${totalEgresosMes.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-orange-200 transition-all cursor-default">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 border border-orange-100">
@@ -458,30 +425,6 @@ export default async function AdminDashboardPage({
                             <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Pagos por Conciliar</p>
                             <h2 className="text-3xl font-black text-slate-900 tracking-tight">{totalPendientes} Pago(s)</h2>
                             <p className="text-sm text-slate-400 font-medium mt-1">{montoTotalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.</p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-red-200 transition-all cursor-default">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500 border border-red-100">
-                                    <AlertCircle className="w-6 h-6" />
-                                </div>
-                                <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-red-100">Soporte</span>
-                            </div>
-                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Tickets Abiertos</p>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{ticketsAbiertosCount || 0}</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1">Pendientes por atender</p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-all cursor-default">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 border border-slate-200">
-                                    <Building className="w-6 h-6" />
-                                </div>
-                                <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1.5 rounded-md border border-slate-200">Datos</span>
-                            </div>
-                            <p className="text-xs text-slate-500 font-bold tracking-wide mb-1 uppercase">Inmuebles sin Propietario</p>
-                            <h2 className="text-3xl font-black text-slate-900 tracking-tight">{inmueblesSinPropietario}</h2>
-                            <p className="text-sm text-slate-400 font-medium mt-1">Pendientes de asignar</p>
                         </div>
                     </div>
 
@@ -615,18 +558,6 @@ export default async function AdminDashboardPage({
                                         <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#1e3a8a] transform group-hover:translate-x-1 transition-all" />
                                     </Link>
 
-                                    <Link href="/dashboard/admin/anuncios" className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-[#1e3a8a]/40 hover:bg-[#1e3a8a]/5 hover:shadow-sm transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-slate-100 text-slate-500 p-2.5 rounded-lg group-hover:bg-white group-hover:text-[#1e3a8a] group-hover:shadow-sm transition-all border border-transparent group-hover:border-blue-100">
-                                                <Megaphone className="w-5 h-5" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900 group-hover:text-[#1e3a8a]">Postear Anuncio</p>
-                                                <p className="text-[10px] text-slate-500">Difundir al tablón público</p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#1e3a8a] transform group-hover:translate-x-1 transition-all" />
-                                    </Link>
 
                                     <Link href="/dashboard/admin/finanzas" className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-[#1e3a8a]/40 hover:bg-[#1e3a8a]/5 hover:shadow-sm transition-all group">
                                         <div className="flex items-center gap-4">
@@ -651,52 +582,7 @@ export default async function AdminDashboardPage({
                                     </h3>
                                     {totalPendientes > 0 && <span className="bg-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm animate-pulse">{totalPendientes} Urgentes</span>}
                                 </div>
-
-                                <div className="overflow-y-auto flex-1 p-2 custom-scrollbar relative">
-                                    {totalPendientes === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-48 text-slate-400">
-                                            <span className="bg-emerald-50 text-emerald-500 p-4 rounded-full mb-3 shadow-inner">
-                                                <CheckCircle2 className="w-8 h-8" />
-                                            </span>
-                                            <p className="text-sm font-bold text-slate-700">¡Bandeja Limpia!</p>
-                                            <p className="text-[10px] text-slate-400 mt-1">No hay transferencias pendientes.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full">
-                                            <div className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-slate-100 bg-white sticky top-0 z-10 w-full mb-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Inmueble</span>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest col-span-2 leading-none">Monto Reportado</span>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right leading-none">Inspección</span>
-                                            </div>
-                                            {pagosPendientes?.slice(0, 6).map(pago => {
-                                                const inms = (pago.perfiles?.inmuebles || []).map((i: any) => i.identificador).join(', ') || 'N/A';
-                                                const montoUsd = (Number(pago.monto_bs) / pago.tasa_aplicada).toFixed(2);
-
-                                                return (
-                                                    <div key={pago.id} className="grid grid-cols-4 gap-2 px-4 py-3 lg:py-4 border-b border-slate-50 items-center hover:bg-slate-50 transition-colors group">
-                                                        <span className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-[#1e3a8a]">{inms}</span>
-                                                        <div className="col-span-2 flex flex-col justify-center">
-                                                            <span className="text-sm font-black text-slate-900">${montoUsd}</span>
-                                                            <span className="text-[9px] font-medium text-slate-400">REF: {pago.referencia}</span>
-                                                        </div>
-                                                        <div className="text-right flex justify-end">
-                                                            <Link scroll={false} href={`/dashboard/admin?ver_pago=${pago.id}`} className="inline-flex p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-[#1e3a8a] group-hover:text-white transition-colors shadow-sm border border-slate-200 group-hover:border-[#1e3a8a]">
-                                                                <Eye className="w-4 h-4" />
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                            {totalPendientes > 6 && (
-                                                <div className="p-4 bg-slate-50/50 mt-1 rounded-b-xl flex justify-center">
-                                                    <a href="#" className="bg-white border text-center w-full border-slate-200 text-xs font-bold text-[#1e3a8a] rounded-lg py-2 hover:bg-slate-50 transition-colors shadow-sm">
-                                                        Cargar Restantes ({totalPendientes - 6})
-                                                    </a>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                <FiltroPagos pagosPendientesObj={pagosPendientes || []} />
                             </div>
 
                         </div>
@@ -717,23 +603,6 @@ export default async function AdminDashboardPage({
                     <NotificacionesWidget count={unreadAdminCount || 0} href="/dashboard/admin/notificaciones" theme="light" />
                 </header>
 
-                {/* ANUNCIO MOBILE DESTACADO */}
-                {anuncioTablon && (
-                    <div className="mx-5 mt-4">
-                        <div className="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] p-4 rounded-2xl shadow-lg border border-blue-400/20">
-                            <div className="flex items-center gap-3 mb-2">
-                                <Megaphone className="w-4 h-4 text-blue-200" />
-                                <span className="text-blue-100 text-[9px] font-bold uppercase tracking-widest">Aviso Importante</span>
-                            </div>
-                            <p className="text-white text-sm font-bold leading-tight">
-                                {anuncioTablon}
-                            </p>
-                            <Link href="/dashboard/admin/anuncios" className="mt-3 block text-center py-2 bg-white/10 rounded-lg text-white text-[10px] font-bold border border-white/10">
-                                Actualizar Anuncio
-                            </Link>
-                        </div>
-                    </div>
-                )}
 
                 <div className="px-5 space-y-4 pt-4">
                     {successMsg && (
@@ -756,18 +625,6 @@ export default async function AdminDashboardPage({
                         </div>
                     </div>
 
-
-                    <Link href="/dashboard/admin/anuncios" className="flex items-center justify-between bg-amber-50 border border-amber-200 p-4 rounded-xl mt-4 hover:bg-amber-100 transition-colors">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-amber-500 text-white p-2.5 rounded-xl shadow-sm">
-                                <Megaphone className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <p className="font-bold text-slate-800 tracking-tight">Cartelera de Anuncios</p>
-                                <p className="text-xs text-slate-500">Publica noticias en el muro vecinal</p>
-                            </div>
-                        </div>
-                    </Link>
 
                     <Link href="/dashboard/admin/finanzas/egresos" className="flex items-center justify-between bg-red-50 border border-red-200 p-4 rounded-xl mt-4 hover:bg-red-100 transition-colors">
                         <div className="flex items-center gap-4">

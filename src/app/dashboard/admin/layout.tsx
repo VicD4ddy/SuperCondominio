@@ -4,7 +4,6 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 import AdminBottomNav from './AdminBottomNav'
 import AdminSidebar from './AdminSidebar'
-import ImpersonationBanner from './ImpersonationBanner'
 
 export default async function AdminDashboardLayout({
     children,
@@ -18,16 +17,11 @@ export default async function AdminDashboardLayout({
     } = await supabase.auth.getUser()
 
     if (!user) {
-        redirect('/login')
+        redirect('/admin')
     }
-
-    const cookieStore = await cookies()
-    const isImpersonating = cookieStore.has('impersonated_condo_id')
 
     return (
         <div className="bg-slate-50 min-h-screen font-sans w-full flex flex-col">
-            {isImpersonating && <ImpersonationBanner />}
-
             <div className="flex flex-col md:flex-row flex-1">
                 {/* Sidebar (Only visible on MD+ screens) */}
                 <AdminSidebar />

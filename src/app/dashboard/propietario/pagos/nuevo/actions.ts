@@ -14,16 +14,7 @@ export async function submitPagoAction(formData: FormData) {
             return { success: false, error: 'Sesión no válida o expirada. Por favor, vuelve a iniciar sesión.' }
         }
 
-        // 1. Obtener Condominio asociado al Perfil
-        const { data: perfil } = await supabase
-            .from('perfiles')
-            .select('condominio_id')
-            .eq('id', perfilId)
-            .single()
-
-        if (!perfil) {
-            return { success: false, error: 'No se encontró el condominio asociado.' }
-        }
+    // En modo single-tenant, no necesitamos buscar el condominio_id
 
         // 2. Extraer datos del formulario
         const montoBs = formData.get('montoBs') as string
@@ -37,7 +28,7 @@ export async function submitPagoAction(formData: FormData) {
 
         // 3. Subir archivo a Storage (comprobantes_pago)
         const fileExt = archivo.name.split('.').pop()
-        const fileName = `${perfil.condominio_id}/${perfilId}-${Date.now()}.${fileExt}`
+        const fileName = `pagos/${perfilId}-${Date.now()}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
             .from('comprobantes_pago')
@@ -78,7 +69,6 @@ export async function submitPagoAction(formData: FormData) {
         const { error: insertError } = await supabase
             .from('pagos_reportados')
             .insert({
-                condominio_id: perfil.condominio_id,
                 perfil_id: perfilId,
                 monto_bs: montoBs,
                 tasa_aplicada: tasaAplicada,

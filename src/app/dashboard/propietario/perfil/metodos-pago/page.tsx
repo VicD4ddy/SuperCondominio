@@ -10,23 +10,14 @@ export default async function MetodosPagoPage() {
 
     if (!perfilId) return null
 
-    // Obtener condominio_id del perfil
-    const { data: perfil } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('id', perfilId)
-        .single()
-
-    if (!perfil) return null
-
-    // Obtener datos del condominio (cuentas bancarias)
-    const { data: condominio } = await supabase
-        .from('condominios')
+    // Obtener datos de configuración global (cuentas bancarias)
+    const { data: config } = await supabase
+        .from('configuracion_global')
         .select('nombre, cuentas_bancarias')
-        .eq('id', perfil.condominio_id)
+        .limit(1)
         .single()
 
-    const cuentas = (condominio?.cuentas_bancarias as any[]) || []
+    const cuentas = (config?.cuentas_bancarias as any[]) || []
 
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
@@ -36,7 +27,7 @@ export default async function MetodosPagoPage() {
                 </Link>
                 <div>
                     <h1 className="text-xl font-bold text-[#1e3a8a]">Cuentas de Pago</h1>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{condominio?.nombre}</p>
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{config?.nombre}</p>
                 </div>
             </header>
 

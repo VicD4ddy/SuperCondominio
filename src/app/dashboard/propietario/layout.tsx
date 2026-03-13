@@ -12,16 +12,12 @@ export default async function PropietarioDashboardLayout({
 }) {
     const supabase = await createClient()
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-        redirect('/login')
-    }
-
     const cookieStore = await cookies()
     const hasToken = cookieStore.has('propietario_token')
+
+    if (!hasToken) {
+        redirect('/')
+    }
 
     return (
         <div className="bg-slate-50 min-h-screen font-sans w-full flex flex-col md:flex-row">

@@ -22,12 +22,6 @@ export default function AdminBottomNav() {
             isActive: pathname.startsWith('/dashboard/admin/finanzas')
         },
         {
-            name: 'Muro',
-            href: '/dashboard/admin/anuncios',
-            icon: Megaphone,
-            isActive: pathname.startsWith('/dashboard/admin/anuncios')
-        },
-        {
             name: 'Vecinos',
             href: '/dashboard/admin/vecinos',
             icon: Users,

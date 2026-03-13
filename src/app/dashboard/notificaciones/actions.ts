@@ -45,13 +45,12 @@ export async function eliminarNotificacionAction(id: string) {
     return { success: true }
 }
 
-export async function marcarTodasLeidasAction(condominio_id: string, perfil_id: string | null = null) {
+export async function marcarTodasLeidasAction(perfil_id: string | null = null) {
     const supabase = await createClient()
 
     let query = supabase
         .from('notificaciones')
         .update({ leida: true })
-        .eq('condominio_id', condominio_id)
         .eq('leida', false)
 
     if (perfil_id) {

@@ -15,14 +15,13 @@ export default async function AdminNotificacionesPage() {
     const supabase = await createClient()
 
     if (!user || !adminPerfil) {
-        redirect('/login')
+        redirect('/admin')
     }
 
     // Cargar notificaciones para administradores (perfil_id IS NULL)
     const { data: notificaciones } = await supabase
         .from('notificaciones')
         .select('*')
-        .eq('condominio_id', adminPerfil.condominio_id)
         .is('perfil_id', null)
         .order('created_at', { ascending: false })
 
@@ -44,7 +43,6 @@ export default async function AdminNotificacionesPage() {
             <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <NotificacionesClientList
                     initialNotificaciones={notificaciones || []}
-                    condominioId={adminPerfil.condominio_id}
                 // No pasamos perfilId porque estas notif. son para el rol admin colectivo
                 />
             </main>

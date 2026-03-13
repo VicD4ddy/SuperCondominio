@@ -10,21 +10,12 @@ export default async function AyudaPage() {
 
     if (!perfilId) return null
 
-    // 1. Obtener condominio_id del residente
-    const { data: residente } = await supabase
-        .from('perfiles')
-        .select('condominio_id')
-        .eq('id', perfilId)
-        .single()
-
-    if (!residente) return null
-
-    // 2. Obtener el perfil del administrador de ese condominio
+    // Obtener el perfil del administrador (ahora único en la BD)
     const { data: admin } = await supabase
         .from('perfiles')
         .select('*')
-        .eq('condominio_id', residente.condominio_id)
         .eq('rol', 'admin')
+        .limit(1)
         .single()
 
     return (

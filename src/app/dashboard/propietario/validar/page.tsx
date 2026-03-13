@@ -20,7 +20,7 @@ export default async function ValidarPropietarioPage({
             .limit(1)
             .single()
 
-        if (profile?.rol === 'superadmin') redirect('/dashboard/superadmin')
+
         if (profile?.rol === 'admin') redirect('/dashboard/admin')
     }
 

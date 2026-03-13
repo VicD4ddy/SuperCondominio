@@ -12,8 +12,6 @@ export async function emitirCobroMasivoAction(formData: FormData) {
 
         if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
-        const condominioId = adminPerfil.condominio_id
-
         // Extraer datos del formulario
         const mes = formData.get('mes') as string
         const montoTotalUsd = parseFloat(formData.get('monto_total_usd') as string)
@@ -28,7 +26,6 @@ export async function emitirCobroMasivoAction(formData: FormData) {
         const { data: inmuebles, error: errInmuebles } = await supabase
             .from('inmuebles')
             .select('id')
-            .eq('condominio_id', condominioId)
 
         if (errInmuebles || !inmuebles || inmuebles.length === 0) {
             return { error: 'No se encontraron inmuebles registrados en este condominio.' }
@@ -40,7 +37,6 @@ export async function emitirCobroMasivoAction(formData: FormData) {
             const montoInmueble = montoTotalUsd.toFixed(2)
 
             return {
-                condominio_id: condominioId,
                 inmueble_id: inm.id,
                 mes: mes,
                 monto_usd: montoInmueble,
@@ -65,12 +61,10 @@ export async function emitirCobroMasivoAction(formData: FormData) {
         const { data: propietarios } = await supabase
             .from('perfiles')
             .select('id')
-            .eq('condominio_id', condominioId)
             .eq('rol', 'propietario')
 
         if (propietarios && propietarios.length > 0) {
             const notifs = propietarios.map((p: any) => ({
-                condominio_id: condominioId,
                 perfil_id: p.id,
                 tipo: 'nuevo_cobro',
                 titulo: 'Nueva Cuota Emitida',

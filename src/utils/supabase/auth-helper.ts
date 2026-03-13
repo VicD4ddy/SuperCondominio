@@ -38,113 +38,77 @@ export async function updateSession(request: NextRequest) {
         user = null
     }
 
-    const isLoginUrl = request.nextUrl.pathname.startsWith('/login')
-    const isDashboardUrl = request.nextUrl.pathname.startsWith('/dashboard')
-    const isHomeUrl = request.nextUrl.pathname === '/'
+    const { pathname } = request.nextUrl
+    const isLoginUrl = pathname.startsWith('/admin')
+    const isDashboardAdminUrl = pathname.startsWith('/dashboard/admin')
+    const isDashboardPropietarioUrl = pathname.startsWith('/dashboard/propietario')
+    const isHomeUrl = pathname === '/'
 
-    // Redirect unauthenticated users to login if trying to access dashboard
-    if (!user && isDashboardUrl) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        return NextResponse.redirect(url)
-    }
+    const isPropietarioTokenPresent = request.cookies.has('propietario_token')
 
-    // If authenticated, check role and route appropriately
+    // Determine role (We now assume Supabase Auth users are Admins, but we double-check just in case)
+    let role = null
     if (user) {
-        // Fetch role from profile
         const { data: profiles, error: profileError } = await supabase
             .from('perfiles')
-            .select('rol, condominio_id')
-            .or(`auth_user_id.eq.${user.id},id.eq.${user.id}`)
+            .select('rol')
+            .eq('auth_user_id', user.id)
             .limit(1)
+        
+        role = profiles?.[0]?.rol
 
-        const role = profiles?.[0]?.rol
-        const isImpersonating = request.cookies.has('impersonated_condo_id')
-
-        // Debugging logs (Check your terminal)
+        // Debugging logs
         console.log('--- DEBUG AUTH ---')
         console.log('User ID:', user.id)
         console.log('Profile Role Found:', role)
-        console.log('Impersonating:', isImpersonating)
         if (profileError) console.error('Profile Error:', profileError.message)
         console.log('------------------')
+    }
 
-        const isPropietarioTokenPresent = request.cookies.has('propietario_token')
-        const isValidarUrl = request.nextUrl.pathname.startsWith('/dashboard/propietario/validar')
-
-        // SAFETY FIX: If user is authenticated but no profile/role exists, don't loop.
-        // Redirect to a safe state (validar) if we are in a dashboard area.
-        if (!role && isDashboardUrl) {
-            console.error("Auth Loop Prevention: Unrecognized role for user", user.id);
-            if (!isValidarUrl) {
-                const url = request.nextUrl.clone()
-                url.pathname = '/dashboard/propietario/validar'
-                return NextResponse.redirect(url)
-            }
-            return supabaseResponse
-        }
-
-        // If logged in and on login/home page, redirect to correct dashboard
-        if (isLoginUrl || isHomeUrl) {
+    // 1. Home & Login Pages (Auto-Redirects)
+    if (isHomeUrl || isLoginUrl) {
+        if (role === 'admin') {
             const url = request.nextUrl.clone()
-            if (role === 'superadmin') {
-                url.pathname = isImpersonating ? '/dashboard/admin' : '/dashboard/superadmin'
-            } else if (role === 'admin') {
-                url.pathname = '/dashboard/admin'
-            } else {
-                url.pathname = isPropietarioTokenPresent ? '/dashboard/propietario' : '/dashboard/propietario/validar'
-            }
+            url.pathname = '/dashboard/admin'
             return NextResponse.redirect(url)
         }
-
-        // Role Guarding for Dashboard Superadmin
-        if (request.nextUrl.pathname.startsWith('/dashboard/superadmin') && role !== 'superadmin') {
+        if (isPropietarioTokenPresent && isHomeUrl) {
             const url = request.nextUrl.clone()
-            url.pathname = role === 'admin' ? '/dashboard/admin' : '/dashboard/propietario'
+            url.pathname = '/dashboard/propietario'
             return NextResponse.redirect(url)
         }
+    }
 
-        // Role Guarding for Dashboard Admin
-        // Special Case: Allow Superadmins if they are impersonating
-        if (request.nextUrl.pathname.startsWith('/dashboard/admin')) {
-            if (role === 'superadmin' && isImpersonating) {
-                // Allow through
-            } else if (role !== 'admin') {
-                const url = request.nextUrl.clone()
-                url.pathname = role === 'superadmin' ? '/dashboard/superadmin' : '/dashboard/propietario'
-                return NextResponse.redirect(url)
-            }
-        }
-
-        // Role Guarding for Dashboard Propietario
-        if (request.nextUrl.pathname.startsWith('/dashboard/propietario') && role !== 'propietario') {
+    // 2. Protect Admin Dashboard (Requires Supabase Auth & Admin Role)
+    if (isDashboardAdminUrl) {
+        if (!user || role !== 'admin') {
             const url = request.nextUrl.clone()
-            url.pathname = role === 'superadmin' ? '/dashboard/superadmin' : '/dashboard/admin'
+            url.pathname = '/admin'
             return NextResponse.redirect(url)
         }
+    }
 
-        // Two-Step Guarding: Propietario must have chosen their Cedula if not on the validar page
-        if (role === 'propietario' && !isPropietarioTokenPresent && !isValidarUrl && request.nextUrl.pathname.startsWith('/dashboard/propietario')) {
+    // 3. Protect Propietario Dashboard (Requires only Propietario Cookie)
+    if (isDashboardPropietarioUrl) {
+        if (!isPropietarioTokenPresent) {
+            // Bounce unauthenticated users to the Home page for Cedula Search
             const url = request.nextUrl.clone()
-            url.pathname = '/dashboard/propietario/validar'
+            url.pathname = role === 'admin' ? '/dashboard/admin' : '/'
             return NextResponse.redirect(url)
         }
+    }
 
-        // Redirect Superadmin/Admin AWAY from the validation page if they somehow land there
-        if (isValidarUrl && (role === 'superadmin' || role === 'admin')) {
-            const url = request.nextUrl.clone()
-            url.pathname = role === 'superadmin' ? '/dashboard/superadmin' : '/dashboard/admin'
-            return NextResponse.redirect(url)
+    // 4. Base Dashboard bare url router
+    if (pathname === '/dashboard') {
+        const url = request.nextUrl.clone()
+        if (role === 'admin') {
+            url.pathname = '/dashboard/admin'
+        } else if (isPropietarioTokenPresent) {
+            url.pathname = '/dashboard/propietario'
+        } else {
+            url.pathname = '/'
         }
-
-        // Base dashboard auto-redirect
-        if (request.nextUrl.pathname === '/dashboard') {
-            const url = request.nextUrl.clone()
-            if (role === 'superadmin') url.pathname = isImpersonating ? '/dashboard/admin' : '/dashboard/superadmin'
-            else if (role === 'admin') url.pathname = '/dashboard/admin'
-            else url.pathname = '/dashboard/propietario'
-            return NextResponse.redirect(url)
-        }
+        return NextResponse.redirect(url)
     }
 
     return supabaseResponse

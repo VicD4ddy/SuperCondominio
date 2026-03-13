@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CreditCard, Ticket, User, LogOut, Megaphone } from 'lucide-react'
+import { Home, CreditCard, Ticket, User, LogOut, History } from 'lucide-react'
 import { signOutAction } from '@/app/auth/actions'
 
 export default function PropietarioSidebar() {
@@ -22,10 +22,10 @@ export default function PropietarioSidebar() {
             isActive: pathname.startsWith('/dashboard/propietario/pagos')
         },
         {
-            name: 'Muro Vecinal',
-            href: '/dashboard/propietario#muro-vecinal',
-            icon: Megaphone,
-            isActive: false
+            name: 'Historial',
+            href: '/dashboard/propietario/historial',
+            icon: History,
+            isActive: pathname.startsWith('/dashboard/propietario/historial')
         },
         {
             name: 'Mi Perfil',

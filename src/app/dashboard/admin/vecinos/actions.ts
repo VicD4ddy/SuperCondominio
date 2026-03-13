@@ -39,7 +39,6 @@ export async function crearVecinoAction(formData: FormData) {
         const { data: otroVecino } = await supabase
             .from('perfiles')
             .select('auth_user_id')
-            .eq('condominio_id', adminPerfil.condominio_id)
             .eq('rol', 'propietario')
             .not('auth_user_id', 'is', null)
             .limit(1)
@@ -51,7 +50,6 @@ export async function crearVecinoAction(formData: FormData) {
         const { data: nuevoPerfil, error: errorPerfil } = await supabase
             .from('perfiles')
             .insert({
-                condominio_id: adminPerfil.condominio_id,
                 rol: 'propietario',
                 nombres,
                 apellidos,
@@ -216,7 +214,6 @@ export async function crearInmuebleAction(formData: FormData) {
         const { data: newInm, error } = await supabase
             .from('inmuebles')
             .insert({
-                condominio_id: adminPerfil.condominio_id,
                 identificador
             })
             .select()
@@ -276,8 +273,6 @@ export async function importarInmueblesMasivoAction(items: any[]) {
 
         if (!user || !adminPerfil) return { success: false, error: 'No autorizado o perfil no encontrado' }
 
-        const condominioId = adminPerfil.condominio_id
-
         // 2. Procesar cada fila
         let procesados = 0
         let errores = 0
@@ -292,7 +287,6 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                 let { data: existingInmueble } = await supabase
                     .from('inmuebles')
                     .select('id, propietario_id')
-                    .eq('condominio_id', condominioId)
                     .eq('identificador', inmueble)
                     .single()
 
@@ -301,7 +295,7 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                 if (!currentInmuebleId) {
                     const { data: newInm, error: errorInm } = await supabase
                         .from('inmuebles')
-                        .insert({ condominio_id: condominioId, identificador: inmueble })
+                        .insert({ identificador: inmueble })
                         .select()
                         .single()
 
@@ -319,7 +313,6 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                     const { data: existingPerfil } = await supabase
                         .from('perfiles')
                         .select('id')
-                        .eq('condominio_id', condominioId)
                         .eq('cedula', cedula)
                         .single()
 
@@ -329,7 +322,6 @@ export async function importarInmueblesMasivoAction(items: any[]) {
                         const { data: newPerfil, error: errorP } = await supabase
                             .from('perfiles')
                             .insert({
-                                condominio_id: condominioId,
                                 rol: 'propietario',
                                 nombres: nombre,
                                 apellidos: apellido,
@@ -371,10 +363,10 @@ export async function importarInmueblesMasivoAction(items: any[]) {
 
 export async function getInmueblesDatosAction() {
     try {
-        const { user, profile: adminPerfil } = await getAdminProfile()
+        const { user, profile: adminPerfil, config } = await getAdminProfile()
         const supabase = await createClient()
 
-        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
+        if (!user || !adminPerfil || !config) return { error: 'No autorizado o perfil no encontrado' }
 
         const { data: inmuebles } = await supabase
             .from('inmuebles')
@@ -388,12 +380,11 @@ export async function getInmueblesDatosAction() {
                     telefono
                 )
             `)
-            .eq('condominio_id', adminPerfil.condominio_id)
             .order('identificador', { ascending: true })
 
         return {
             inmuebles: inmuebles || [],
-            condominioNombre: (adminPerfil.condominios as any)?.nombre || 'Condominio'
+            condominioNombre: config?.nombre || 'Condominio'
         }
     } catch (err) {
         return { error: 'Error al obtener datos.' }

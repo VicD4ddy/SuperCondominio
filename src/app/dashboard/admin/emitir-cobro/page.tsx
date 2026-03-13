@@ -10,16 +10,14 @@ export default async function EmitirCobroPage() {
     const { profile: adminPerfil } = await getAdminProfile()
     const supabase = await createClient()
 
-    // Obtener parámetros financieros del condominio
+    // Obtener parámetros financieros globales
     let cuotaMensualUsd = 0
-    if (adminPerfil?.condominio_id) {
-        const { data: params } = await supabase
-            .from('parametros_financieros')
-            .select('monto_mensual_usd')
-            .eq('condominio_id', adminPerfil.condominio_id)
-            .single()
-        cuotaMensualUsd = Number(params?.monto_mensual_usd || 0)
-    }
+    const { data: config } = await supabase
+        .from('configuracion_global')
+        .select('cuota_mensual_usd')
+        .limit(1)
+        .single()
+    cuotaMensualUsd = Number(config?.cuota_mensual_usd || 0)
 
     // Calcular el nombre del mes actual en español
     const now = new Date()

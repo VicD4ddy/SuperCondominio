@@ -6,12 +6,10 @@ import { getAdminProfile } from '@/utils/supabase/admin-helper'
 
 export async function guardarParametrosFinancierosAction(montoMensual: number, diaCobro: number) {
     try {
-        const { user, profile: adminPerfil } = await getAdminProfile()
+        const { user, profile: adminPerfil, config } = await getAdminProfile()
         const supabase = await createClient()
 
-        if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
-
-        const condominioId = adminPerfil.condominio_id
+        if (!user || !adminPerfil || !config) return { error: 'No autorizado o perfil no encontrado' }
 
         // Validar data
         if (montoMensual < 0) return { error: 'El monto no puede ser negativo' }
@@ -19,12 +17,12 @@ export async function guardarParametrosFinancierosAction(montoMensual: number, d
 
         // Hacer Update a la tabla maestra
         const { error } = await supabase
-            .from('condominios')
+            .from('configuracion_global')
             .update({
-                monto_mensual_usd: montoMensual,
+                cuota_mensual_usd: montoMensual,
                 dia_cobro: diaCobro
             })
-            .eq('id', condominioId)
+            .eq('id', config.id)
 
         if (error) {
             console.error('Error supabase guardarParametrosFinancierosAction:', error)
@@ -48,7 +46,7 @@ export async function getReporteConsolidadosAction() {
 
         if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
-        const condominioId = adminPerfil.condominio_id
+        // El condominioId ya no es necesario en single-tenant
 
         // 1. Obtener inmuebles con sus propietarios (incluyendo el ID de perfil para el mapeo)
         const { data: inmuebles, error: errInmuebles } = await supabase
@@ -62,7 +60,6 @@ export async function getReporteConsolidadosAction() {
                     apellidos
                 )
             `)
-            .eq('condominio_id', condominioId)
             .order('identificador', { ascending: true })
 
         if (errInmuebles) throw errInmuebles
@@ -71,7 +68,6 @@ export async function getReporteConsolidadosAction() {
         const { data: recibos, error: errRecibos } = await supabase
             .from('recibos_cobro')
             .select('inmueble_id, monto_usd, monto_pagado_usd, estado, mes, fecha_emision')
-            .eq('condominio_id', condominioId)
 
         if (errRecibos) throw errRecibos
 
@@ -79,7 +75,6 @@ export async function getReporteConsolidadosAction() {
         const { data: pagos, error: errPagos } = await supabase
             .from('pagos_reportados')
             .select('perfil_id, monto_bs, fecha_pago, created_at')
-            .eq('condominio_id', condominioId)
             .eq('estado', 'aprobado')
             .order('created_at', { ascending: false })
 
@@ -169,10 +164,10 @@ export async function getReporteAnualAction(year?: number) {
         if (!user || !adminPerfil) return { error: 'No autorizado o perfil no encontrado' }
 
         // 0. Obtener nombre del condominio
-        const { data: condo } = await supabase
-            .from('condominios')
+        const { data: config } = await supabase
+            .from('configuracion_global')
             .select('nombre')
-            .eq('id', adminPerfil.condominio_id)
+            .limit(1)
             .single()
 
         // 1. Obtener inmuebles con cédula
@@ -187,7 +182,6 @@ export async function getReporteAnualAction(year?: number) {
                     cedula
                 )
             `)
-            .eq('condominio_id', adminPerfil.condominio_id)
 
         if (errInmuebles) throw errInmuebles
 
@@ -198,7 +192,6 @@ export async function getReporteAnualAction(year?: number) {
         const { data: recibos, error: errRecibos } = await supabase
             .from('recibos_cobro')
             .select('inmueble_id, monto_usd, monto_pagado_usd, mes, fecha_emision')
-            .eq('condominio_id', adminPerfil.condominio_id)
             .gte('fecha_emision', startDate)
             .lte('fecha_emision', endDate)
 
@@ -240,7 +233,7 @@ export async function getReporteAnualAction(year?: number) {
 
         return {
             data: dataExcel,
-            condominio: condo?.nombre || 'Condominio'
+            condominio: config?.nombre || 'Condominio'
         }
     } catch (err) {
         console.error('Error en getReporteAnualAction:', err)
@@ -259,7 +252,6 @@ export async function importRecibosExcelAction(data: any[]) {
         const { data: inmuebles } = await supabase
             .from('inmuebles')
             .select('id, identificador')
-            .eq('condominio_id', adminPerfil.condominio_id)
 
         if (!inmuebles) return { error: 'No se encontraron inmuebles' }
 
@@ -279,7 +271,6 @@ export async function importRecibosExcelAction(data: any[]) {
                 if (monto > 0) {
                     const monthNum = (i + 1).toString().padStart(2, '0')
                     inserts.push({
-                        condominio_id: adminPerfil.condominio_id,
                         inmueble_id: inm.id,
                         mes: mesNombre,
                         monto_usd: monto,
@@ -339,7 +330,6 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
         const { data: nuevoPago, error: insertError } = await supabase
             .from('pagos_reportados')
             .insert({
-                condominio_id: adminPerfil.condominio_id,
                 perfil_id: perfilId,
                 monto_bs: datos.moneda === 'BS' ? datos.montoRegistrado : (datos.montoRegistrado * datos.tasaAplicada),
                 tasa_aplicada: datos.tasaAplicada,
@@ -399,7 +389,6 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
         // 4. Notificar al usuario (si tiene un perfil creado)
         if (perfilId) {
             await supabase.from('notificaciones').insert({
-                condominio_id: adminPerfil.condominio_id,
                 perfil_id: perfilId,
                 tipo: 'pago_aprobado',
                 titulo: 'Pago Registrado Oficialmente',
@@ -424,7 +413,6 @@ export async function enviarRecordatoriosMorososAction(perfilIds: string[]) {
         if (!perfilIds || perfilIds.length === 0) return { error: 'No hay morosos seleccionados' }
 
         const notifs = perfilIds.map(perfilId => ({
-            condominio_id: adminPerfil.condominio_id,
             perfil_id: perfilId,
             tipo: 'recordatorio_mora',
             titulo: '⚠️ Recordatorio de Pago Pendiente',

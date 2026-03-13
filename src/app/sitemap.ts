@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Rutas públicas que queremos indexar
     const routes = [
         '',
-        '/login',
+        '/admin',
         '/consulta',
     ]
 

@@ -23,12 +23,7 @@ export default async function PropietarioDashboardPage() {
     // Cargar datos reales básicos del propietario
     const { data: perfil } = await supabase
         .from('perfiles')
-        .select(`
-            nombres, 
-            estado_solvencia, 
-            condominio_id, 
-            condominios(nombre, carta_residencia_url)
-        `)
+        .select('nombres, estado_solvencia')
         .eq('id', perfilId)
         .single()
 
@@ -36,8 +31,14 @@ export default async function PropietarioDashboardPage() {
         redirect('/dashboard/propietario/validar')
     }
 
-    const condominioInfo = perfil.condominios as any
-    const nombreCondominio = condominioInfo?.nombre || 'Mi Condominio'
+    // Cargar configuración global (nombre de condominio)
+    const { data: config } = await supabase
+        .from('configuracion_global')
+        .select('nombre')
+        .limit(1)
+        .single()
+
+    const nombreCondominio = config?.nombre || 'Mi Condominio'
 
     // Calcular saldo pendiente real (en tiempo real, no desde estado_solvencia estático)
     const { data: inmuebles } = await supabase
@@ -61,29 +62,11 @@ export default async function PropietarioDashboardPage() {
 
     const isSolvente = saldoPendienteUsd <= 0
 
-    // Cargar Feed de Anuncios
-    const { data: anuncios } = await supabase
-        .from('cartelera_anuncios')
-        .select('id, titulo, contenido, categoria, fijado, created_at')
-        .eq('condominio_id', perfil.condominio_id)
-        .order('fijado', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-    const categoryColors: Record<string, string> = {
-        'Urgente': 'bg-red-100 text-red-700 border-red-200',
-        'Mantenimiento': 'bg-orange-100 text-orange-700 border-orange-200',
-        'Finanzas': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        'Normativa': 'bg-blue-100 text-blue-700 border-blue-200',
-        'Eventos': 'bg-purple-100 text-purple-700 border-purple-200',
-        'General': 'bg-slate-100 text-slate-700 border-slate-200',
-    }
 
     // Contar notificaciones no leídas
     const { count: unreadCount } = await supabase
         .from('notificaciones')
         .select('*', { count: 'exact', head: true })
-        .eq('condominio_id', perfil.condominio_id)
         .eq('perfil_id', perfilId)
         .eq('leida', false)
 
@@ -101,7 +84,6 @@ export default async function PropietarioDashboardPage() {
     const { data: egresos } = await supabase
         .from('egresos')
         .select('id, descripcion, monto_usd, fecha_gasto, categoria')
-        .eq('condominio_id', perfil.condominio_id)
         .order('fecha_gasto', { ascending: false })
         .limit(5)
 
@@ -194,50 +176,7 @@ export default async function PropietarioDashboardPage() {
                 {/* Gastos: Transparencia */}
                 <GastosTransparenciaWidget egresos={egresos || []} />
 
-                {/* Cartelera Virtual */}
-                <div id="muro-vecinal" className="pt-2 scroll-mt-24">
-                    <div className="flex justify-between items-end mb-3 px-1">
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                            <Megaphone className="w-5 h-5 text-blue-600" />
-                            Muro Vecinal
-                        </h3>
-                    </div>
 
-                    <div className="space-y-4">
-                        {anuncios?.length === 0 ? (
-                            <div className="text-center py-8 bg-white rounded-2xl border border-slate-200 border-dashed">
-                                <p className="text-slate-500 text-sm font-medium">No hay noticias recientes.</p>
-                            </div>
-                        ) : (
-                            anuncios?.map((anuncio: any) => (
-                                <div key={anuncio.id} className={`bg-white rounded-2xl p-6 shadow-sm relative overflow-hidden transition-all ${anuncio.fijado ? 'border-2 border-amber-300 ring-2 ring-amber-50' : 'border border-slate-100'}`}>
-                                    {anuncio.fijado && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
-                                    )}
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex flex-col gap-3 items-start w-full">
-                                            <div className="flex items-center gap-2 w-full justify-between">
-                                                <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold border tracking-wider ${categoryColors[anuncio.categoria] || categoryColors['General']}`}>
-                                                    {anuncio.categoria}
-                                                </span>
-                                                {anuncio.fijado && <Pin className="w-4 h-4 text-amber-500 fill-amber-500" />}
-                                            </div>
-                                            <h3 className="font-bold text-slate-900 text-lg leading-tight">{anuncio.titulo}</h3>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap mb-5">
-                                        {anuncio.contenido}
-                                    </p>
-
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest border-t border-slate-100 pt-4">
-                                        {format(new Date(anuncio.created_at), "d 'de' MMMM, h:mm a", { locale: es })}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
 
             </div>
         </div>

@@ -4,7 +4,7 @@ export type UserRole = 'admin' | 'propietario'
 
 export interface UserProfile {
     id: string
-    condominio_id: string
+
     rol: UserRole
     nombres: string
     apellidos: string

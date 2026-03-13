@@ -9,11 +9,9 @@ import Link from 'next/link'
 
 export default function NotificacionesClientList({
     initialNotificaciones,
-    condominioId,
     perfilId = null
 }: {
     initialNotificaciones: any[],
-    condominioId: string,
     perfilId?: string | null
 }) {
     const [notificaciones, setNotificaciones] = useState(initialNotificaciones)
@@ -33,7 +31,7 @@ export default function NotificacionesClientList({
     const handleMarcarTodas = async () => {
         setIsLoading(true)
         setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))
-        await marcarTodasLeidasAction(condominioId, perfilId)
+        await marcarTodasLeidasAction(perfilId)
         setIsLoading(false)
     }
 

@@ -4,12 +4,11 @@ import { redirect } from 'next/navigation'
 import { CheckCircle2, Building2, Calendar, FileText, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import ReceiptDownloadButton from '@/components/ReceiptDownloadButton'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HistorialVecinalPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
@@ -17,8 +16,13 @@ export default async function HistorialVecinalPage() {
         redirect('/')
     }
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Obtener los últimos 50 pagos reportados que hayan sido aprobados (verificados)
-    const { data: pagosVerificados, error } = await supabase
+    const { data: pagosVerificados, error } = await supabaseAdmin
         .from('pagos_reportados')
         .select(`
             id,
@@ -96,22 +100,6 @@ export default async function HistorialVecinalPage() {
                                                             {fullName} <span className="text-slate-400 font-normal">registró un pago</span>
                                                         </p>
                                                     </div>
-                                                    
-                                                    <ReceiptDownloadButton
-                                                        data={{
-                                                            receiptNumber: pago.id.toString(),
-                                                            propietarioName: fullName,
-                                                            concepto: 'Abono / Cuota',
-                                                            casaApto: 'Asignado',
-                                                            puestoAdicional: false,
-                                                            montoGlobal: `${Number(pago.monto_equivalente_usd).toFixed(2)} USD`,
-                                                            fecha: new Date(pago.fecha_pago || pago.created_at),
-                                                            formaDePago: 'Transf/Pago Móvil',
-                                                            referencia: pago.id.toString(),
-                                                            realizadoPor: 'Administración',
-                                                            condominioName: 'CONJUNTO RESIDENCIAL'
-                                                        }}
-                                                    />
                                                 </div>
                                             </div>
                                         </div>

@@ -35,7 +35,7 @@ export async function getLibroMayorDataAction(dateIso?: string) {
         // 2. Fetch Egresos (Gastos)
         const { data: egresos, error: errEgresos } = await supabase
             .from('gastos')
-            .select('*')
+            .select('id, fecha, tasa_bcv, proveedor, monto_bs, monto_usd, referencia, descripcion')
             .gte('fecha', start)
             .lte('fecha', end)
 

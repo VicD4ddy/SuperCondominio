@@ -1,17 +1,21 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, Shield, User, Key, Lock, CheckCircle2 } from 'lucide-react'
 
 export default async function SeguridadPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
     if (!perfilId) return null
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Obtener datos del perfil
-    const { data: perfil } = await supabase
+    const { data: perfil } = await supabaseAdmin
         .from('perfiles')
         .select('*')
         .eq('id', perfilId)

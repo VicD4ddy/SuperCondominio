@@ -25,7 +25,7 @@ export default async function AdminAjustesPage() {
         return <div className="p-5 text-red-500">Error: Perfil Admin no encontrado.</div>
     }
 
-    const { data: configRows } = await supabase.from('configuracion_global').select('*').limit(1);
+    const { data: configRows } = await supabase.from('configuracion_global').select('id, nombre, cuota_mensual_usd, carta_residencia_url, cuentas_bancarias').limit(1);
     const globalConfig = configRows?.[0];
 
     return (

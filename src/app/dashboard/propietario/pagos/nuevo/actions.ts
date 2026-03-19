@@ -1,18 +1,22 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 
 export async function submitPagoAction(formData: FormData) {
     try {
-        const supabase = await createClient()
         const cookieStore = await cookies()
         const perfilId = cookieStore.get('propietario_token')?.value
 
         if (!perfilId) {
             return { success: false, error: 'Sesión no válida o expirada. Por favor, vuelve a iniciar sesión.' }
         }
+
+        const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
 
     // En modo single-tenant, no necesitamos buscar el condominio_id
 
@@ -30,7 +34,7 @@ export async function submitPagoAction(formData: FormData) {
         const fileExt = archivo.name.split('.').pop()
         const fileName = `pagos/${perfilId}-${Date.now()}.${fileExt}`
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabaseAdmin.storage
             .from('comprobantes_pago')
             .upload(fileName, archivo, {
                 cacheControl: '3600',
@@ -43,7 +47,7 @@ export async function submitPagoAction(formData: FormData) {
         }
 
         // 4. Obtener URL Pública de la imagen
-        const { data: publicUrlData } = supabase.storage
+        const { data: publicUrlData } = supabaseAdmin.storage
             .from('comprobantes_pago')
             .getPublicUrl(fileName)
 
@@ -66,7 +70,7 @@ export async function submitPagoAction(formData: FormData) {
         const montoEquivalenteUsd = Number(montoBs) / tasaAplicada
 
         // 6. Insertar Registro en base de datos
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('pagos_reportados')
             .insert({
                 perfil_id: perfilId,

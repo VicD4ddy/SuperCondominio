@@ -232,7 +232,7 @@ export default function NuevoPagoClient({ cuentasCondominio }: Props) {
                                 value={formData.referencia}
                                 onChange={(e) => setFormData({ ...formData, referencia: e.target.value })}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-slate-900 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                placeholder="Últimos 6 u 8 dígitos"
+                                placeholder="Últimos 4 dígitos"
                             />
                         </div>
                     </div>

@@ -1,17 +1,21 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, Landmark, CreditCard, ExternalLink } from 'lucide-react'
 
 export default async function MetodosPagoPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
     if (!perfilId) return null
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Obtener datos de configuración global (cuentas bancarias)
-    const { data: config } = await supabase
+    const { data: config } = await supabaseAdmin
         .from('configuracion_global')
         .select('nombre, cuentas_bancarias')
         .limit(1)

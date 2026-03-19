@@ -318,13 +318,13 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
         if (!user || !adminPerfil) return { success: false, error: 'No autorizado.' }
 
         // 1. Obtener perfil asociado al inmueble (para notificarlo y enrutarlo)
-        const { data: perfilData } = await supabase
-            .from('perfiles')
-            .select('id')
-            .eq('inmueble_id', datos.inmuebleId)
+        const { data: inmuebleData } = await supabase
+            .from('inmuebles')
+            .select('propietario_id')
+            .eq('id', datos.inmuebleId)
             .single()
 
-        const perfilId = perfilData?.id || null
+        const perfilId = inmuebleData?.propietario_id || null
 
         // 2. Registrar el pago en pagos_reportados como APROBADO ya que lo hizo el Admin
         const { data: nuevoPago, error: insertError } = await supabase
@@ -354,7 +354,7 @@ export async function registrarPagoManualAction(datos: ManualPaymentProps) {
 
         const { data: recibosPendientes } = await supabase
             .from('recibos_cobro')
-            .select('*')
+            .select('id, monto_usd, monto_pagado_usd, estado, fecha_emision')
             .eq('inmueble_id', datos.inmuebleId)
             .in('estado', ['pendiente', 'moroso'])
             .order('fecha_emision', { ascending: true })

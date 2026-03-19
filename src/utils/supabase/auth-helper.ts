@@ -55,19 +55,22 @@ export async function updateSession(request: NextRequest) {
             .eq('auth_user_id', user.id)
             .limit(1)
         
-        role = profiles?.[0]?.rol
+        const rawRole = profiles?.[0]?.rol
+        role = rawRole?.toLowerCase() || null
 
         // Debugging logs
         console.log('--- DEBUG AUTH ---')
         console.log('User ID:', user.id)
-        console.log('Profile Role Found:', role)
+        console.log('Profile Role Found:', rawRole, '(Normalized:', role, ')')
         if (profileError) console.error('Profile Error:', profileError.message)
         console.log('------------------')
     }
 
+    const isAdmin = role === 'admin' || role === 'jefe_condominio'
+
     // 1. Home & Login Pages (Auto-Redirects)
     if (isHomeUrl || isLoginUrl) {
-        if (role === 'admin') {
+        if (isAdmin) {
             const url = request.nextUrl.clone()
             url.pathname = '/dashboard/admin'
             return NextResponse.redirect(url)
@@ -81,7 +84,8 @@ export async function updateSession(request: NextRequest) {
 
     // 2. Protect Admin Dashboard (Requires Supabase Auth & Admin Role)
     if (isDashboardAdminUrl) {
-        if (!user || role !== 'admin') {
+        const isAdmin = role === 'admin' || role === 'jefe_condominio'
+        if (!user || !isAdmin) {
             const url = request.nextUrl.clone()
             url.pathname = '/admin'
             return NextResponse.redirect(url)
@@ -93,7 +97,7 @@ export async function updateSession(request: NextRequest) {
         if (!isPropietarioTokenPresent) {
             // Bounce unauthenticated users to the Home page for Cedula Search
             const url = request.nextUrl.clone()
-            url.pathname = role === 'admin' ? '/dashboard/admin' : '/'
+            url.pathname = isAdmin ? '/dashboard/admin' : '/'
             return NextResponse.redirect(url)
         }
     }
@@ -101,7 +105,7 @@ export async function updateSession(request: NextRequest) {
     // 4. Base Dashboard bare url router
     if (pathname === '/dashboard') {
         const url = request.nextUrl.clone()
-        if (role === 'admin') {
+        if (isAdmin) {
             url.pathname = '/dashboard/admin'
         } else if (isPropietarioTokenPresent) {
             url.pathname = '/dashboard/propietario'

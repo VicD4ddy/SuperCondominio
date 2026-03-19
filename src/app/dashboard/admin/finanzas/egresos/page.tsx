@@ -20,7 +20,7 @@ export default async function AdminEgresosPage() {
     // Obtener egresos del mes actual (o todos por ahora para simplificar el MVP)
     const { data: egresos } = await supabase
         .from('egresos')
-        .select('*')
+        .select('id, descripcion, monto_usd, fecha_gasto, categoria, foto_url')
         .order('fecha_gasto', { ascending: false })
 
     const totalEgresos = egresos?.reduce((acc, curr) => acc + Number(curr.monto_usd), 0) || 0

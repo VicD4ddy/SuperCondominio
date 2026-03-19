@@ -1,4 +1,3 @@
-import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
@@ -10,7 +9,6 @@ export default async function PropietarioDashboardLayout({
 }: {
     children: React.ReactNode
 }) {
-    const supabase = await createClient()
 
     const cookieStore = await cookies()
     const hasToken = cookieStore.has('propietario_token')

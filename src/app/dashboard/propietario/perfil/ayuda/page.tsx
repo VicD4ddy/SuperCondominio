@@ -1,17 +1,21 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { ArrowLeft, HelpCircle, MessageSquare, Phone, User, ExternalLink, Mail } from 'lucide-react'
 
 export default async function AyudaPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
     if (!perfilId) return null
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Obtener el perfil del administrador (ahora único en la BD)
-    const { data: admin } = await supabase
+    const { data: admin } = await supabaseAdmin
         .from('perfiles')
         .select('*')
         .eq('rol', 'admin')

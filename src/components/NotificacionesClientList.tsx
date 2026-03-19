@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { marcarNotificacionLeidaAction, eliminarNotificacionAction, marcarTodasLeidasAction } from '@/app/dashboard/notificaciones/actions'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function NotificacionesClientList({
     initialNotificaciones,
@@ -16,16 +17,19 @@ export default function NotificacionesClientList({
 }) {
     const [notificaciones, setNotificaciones] = useState(initialNotificaciones)
     const [isLoading, setIsLoading] = useState(false)
+    const router = useRouter()
 
     // Handlers
     const handleMarcarLeida = async (id: string) => {
         setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n))
         await marcarNotificacionLeidaAction(id)
+        router.refresh()
     }
 
     const handleEliminar = async (id: string) => {
         setNotificaciones(prev => prev.filter(n => n.id !== id))
         await eliminarNotificacionAction(id)
+        router.refresh()
     }
 
     const handleMarcarTodas = async () => {
@@ -33,6 +37,7 @@ export default function NotificacionesClientList({
         setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))
         await marcarTodasLeidasAction(perfilId)
         setIsLoading(false)
+        router.refresh()
     }
 
     const unreadCount = notificaciones.filter(n => !n.leida).length
@@ -51,20 +56,20 @@ export default function NotificacionesClientList({
 
     return (
         <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-bold text-slate-900">Bandeja de Entrada</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 gap-4">
+                <div className="flex items-center flex-wrap sm:flex-nowrap gap-3">
+                    <h2 className="text-lg font-bold text-slate-900 shrink-0">Bandeja de Entrada</h2>
                     {unreadCount > 0 && (
-                        <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full border border-red-200">
+                        <div className="bg-red-50 text-red-600 text-[11px] font-black px-2.5 py-1 rounded-full border border-red-100 uppercase tracking-widest flex shrink-0 whitespace-nowrap items-center shadow-sm">
                             {unreadCount} nuevas
-                        </span>
+                        </div>
                     )}
                 </div>
                 {unreadCount > 0 && (
                     <button
                         onClick={handleMarcarTodas}
                         disabled={isLoading}
-                        className="text-xs font-bold text-[#1e3a8a] bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        className="text-xs font-bold text-[#1e3a8a] bg-blue-50 border border-blue-100 px-4 py-2 rounded-xl hover:bg-blue-100 transition-all disabled:opacity-50 shadow-sm active:scale-95 flex shrink-0 whitespace-nowrap w-fit"
                     >
                         Marcar todas leídas
                     </button>

@@ -1,10 +1,9 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import NuevoPagoClient from './NuevoPagoClient'
 
 export default async function NuevoPagoPageServer() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
@@ -12,8 +11,13 @@ export default async function NuevoPagoPageServer() {
         redirect('/dashboard/propietario/validar')
     }
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Obtener las Cuentas Bancarias
-    const { data: config } = await supabase
+    const { data: config } = await supabaseAdmin
         .from('configuracion_global')
         .select('cuentas_bancarias')
         .limit(1)

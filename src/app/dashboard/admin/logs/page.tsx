@@ -50,7 +50,7 @@ export default function AdminLogsPage() {
                 if (errLogs) throw errLogs
 
                 // Mapear pagos al formato de bitácora
-                const pagosMapped = (pagos || []).map(pago => {
+                const pagosMapped = (pagos || []).map((pago: any) => {
                     const esVerificado = pago.estado === 'verificado'
                     const perfilObj: any = Array.isArray(pago.perfil) ? pago.perfil[0] : pago.perfil
                     const inmueblesArr = perfilObj?.inmuebles || []
@@ -67,7 +67,7 @@ export default function AdminLogsPage() {
                     }
                 })
 
-                const sistemLogsMapped = (logsData || []).map(log => ({
+                const sistemLogsMapped = (logsData || []).map((log: any) => ({
                     id: log.id,
                     evento: log.evento,
                     detalles: typeof log.detalles === 'string' ? log.detalles : JSON.stringify(log.detalles),
@@ -75,7 +75,7 @@ export default function AdminLogsPage() {
                     perfil: log.perfiles
                 }))
 
-                const combined = [...pagosMapped, ...sistemLogsMapped].sort((a, b) =>
+                const combined = [...pagosMapped, ...sistemLogsMapped].sort((a: any, b: any) =>
                     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 )
                 

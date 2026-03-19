@@ -11,8 +11,9 @@ import TutorialResidentWidget from '@/components/TutorialResidentWidget'
 
 export const dynamic = 'force-dynamic'
 
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+
 export default async function PropietarioDashboardPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
@@ -20,8 +21,16 @@ export default async function PropietarioDashboardPage() {
         redirect('/dashboard/propietario/validar')
     }
 
+    // Instanciar cliente de supabase en modo Service Role
+    // ya que los propietarios se "autentican" solo con una cookie y su cédula, no con Auth real,
+    // por lo que las políticas RLS ("authenticated") los bloquean si usamos el cliente anónimo.
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Cargar datos reales básicos del propietario
-    const { data: perfil } = await supabase
+    const { data: perfil } = await supabaseAdmin
         .from('perfiles')
         .select('nombres, estado_solvencia')
         .eq('id', perfilId)
@@ -32,7 +41,7 @@ export default async function PropietarioDashboardPage() {
     }
 
     // Cargar configuración global (nombre de condominio)
-    const { data: config } = await supabase
+    const { data: config } = await supabaseAdmin
         .from('configuracion_global')
         .select('nombre')
         .limit(1)
@@ -41,22 +50,22 @@ export default async function PropietarioDashboardPage() {
     const nombreCondominio = config?.nombre || 'Mi Condominio'
 
     // Calcular saldo pendiente real (en tiempo real, no desde estado_solvencia estático)
-    const { data: inmuebles } = await supabase
+    const { data: inmuebles } = await supabaseAdmin
         .from('inmuebles')
         .select('id')
         .eq('propietario_id', perfilId)
 
-    const inmueblesIds = inmuebles?.map(i => i.id) || []
+    const inmueblesIds = inmuebles?.map((i: any) => i.id) || []
     let saldoPendienteUsd = 0
 
     if (inmueblesIds.length > 0) {
-        const { data: recibos } = await supabase
+        const { data: recibos } = await supabaseAdmin
             .from('recibos_cobro')
             .select('monto_usd, monto_pagado_usd')
             .in('inmueble_id', inmueblesIds)
             .neq('estado', 'pagado')
 
-        saldoPendienteUsd = recibos?.reduce((acc, r) =>
+        saldoPendienteUsd = recibos?.reduce((acc: any, r: any) =>
             acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0) || 0
     }
 
@@ -64,7 +73,7 @@ export default async function PropietarioDashboardPage() {
 
 
     // Contar notificaciones no leídas
-    const { count: unreadCount } = await supabase
+    const { count: unreadCount } = await supabaseAdmin
         .from('notificaciones')
         .select('*', { count: 'exact', head: true })
         .eq('perfil_id', perfilId)
@@ -81,7 +90,7 @@ export default async function PropietarioDashboardPage() {
     } catch (e) { console.error("Error obteniendo BCV general") }
 
     // Cargar Egresos para el widget de transparencia
-    const { data: egresos } = await supabase
+    const { data: egresos } = await supabaseAdmin
         .from('egresos')
         .select('id, descripcion, monto_usd, fecha_gasto, categoria')
         .order('fecha_gasto', { ascending: false })

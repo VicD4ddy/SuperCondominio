@@ -137,10 +137,10 @@ export default async function AdminFinanzasPage() {
                             <ClipboardList className="w-5 h-5 text-slate-800" />
                             <h3 className="text-slate-800 font-bold">Reporte Consolidado de Deudas</h3>
                         </div>
-                        <ExcelActions condominioName={adminPerfil.condominio?.nombre} />
+                        <ExcelActions condominioName={adminPerfil.condominios?.nombre} />
                     </div>
                     {reporteData ? (
-                        <ReporteCuentasPorCobrar data={reporteData} dataAnual={reporteAnualData} tasaBcv={tasaBcv} condominioName={adminPerfil.condominio?.nombre} />
+                        <ReporteCuentasPorCobrar data={reporteData} dataAnual={reporteAnualData} tasaBcv={tasaBcv} condominioName={adminPerfil.condominios?.nombre} />
                     ) : (
                         <div className="p-10 text-center bg-white rounded-3xl border border-slate-100 text-slate-400 text-sm">
                             Cargando reporte...

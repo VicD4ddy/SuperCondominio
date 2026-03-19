@@ -1,26 +1,39 @@
 import { User, CreditCard, Shield, HelpCircle, LogOut, ChevronRight, FileText, Download } from 'lucide-react'
 import { signOutAction } from '@/app/auth/actions'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export default async function PerfilPropietarioPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
     let condominioData = null;
+    let perfil: any = null;
 
     if (perfilId) {
-        const { data: perfil } = await supabase
+        const supabaseAdmin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
+
+        // 1. Obtener datos del perfil
+        const { data: perfilResponse } = await supabaseAdmin
             .from('perfiles')
-            .select(`
-                condominios ( nombre, carta_residencia_url )
-            `)
+            .select('*')
             .eq('id', perfilId)
             .single()
+            
+        perfil = perfilResponse;
 
-        condominioData = perfil?.condominios as any;
+        // 2. Obtener datos globales del condominio
+        const { data: config } = await supabaseAdmin
+            .from('configuracion_global')
+            .select('nombre, carta_residencia_url')
+            .limit(1)
+            .single()
+
+        condominioData = config;
     }
 
     return (
@@ -37,11 +50,7 @@ export default async function PerfilPropietarioPage() {
                     <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                         <User className="w-10 h-10 text-slate-400" />
                     </div>
-                    <h2 className="text-xl font-bold text-slate-900">Propietario Activo</h2>
-                    <p className="text-sm text-slate-500 font-medium">Torre Principal</p>
-                    <span className="mt-3 bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                        Solvente
-                    </span>
+                    <h2 className="text-xl font-bold text-slate-900 text-center">{perfil?.nombres} {perfil?.apellidos}</h2>
                 </div>
 
                 {/* Carta de Residencia (Siempre Visible) */}

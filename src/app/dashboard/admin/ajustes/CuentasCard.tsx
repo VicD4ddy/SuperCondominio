@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { guardarCuentasAction } from './actions'
 import { Landmark, Plus, Trash2, Save } from 'lucide-react'
 
 export default function CuentasCard({ cuentasIniciales }: { cuentasIniciales: any[] }) {
+    const router = useRouter()
     const [cuentas, setCuentas] = useState<any[]>(cuentasIniciales || [])
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
@@ -64,6 +66,7 @@ export default function CuentasCard({ cuentasIniciales }: { cuentasIniciales: an
             setError(res.error)
         } else {
             setSuccess(true)
+            router.refresh()
             setTimeout(() => setSuccess(false), 3000)
         }
         setLoading(false)
@@ -118,14 +121,14 @@ export default function CuentasCard({ cuentasIniciales }: { cuentasIniciales: an
                 />
                 <input
                     type="text"
-                    placeholder="Titular (Ej: Condominio Las Rosas, J-12345)"
+                    placeholder="Cédula o RIF"
                     value={nuevoTitular}
                     onChange={(e) => setNuevoTitular(e.target.value)}
                     className="w-full text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
                 <input
                     type="text"
-                    placeholder="Número de Cuenta o Teléfono Pago Móvil"
+                    placeholder="Teléfono"
                     value={nuevoNumero}
                     onChange={(e) => setNuevoNumero(e.target.value)}
                     className="w-full text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"

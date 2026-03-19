@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import NotificacionesClientList from '@/components/NotificacionesClientList'
@@ -11,7 +11,6 @@ export const metadata = {
 }
 
 export default async function PropietarioNotificacionesPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
@@ -19,10 +18,15 @@ export default async function PropietarioNotificacionesPage() {
         redirect('/dashboard/propietario/validar')
     }
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Cargar notificaciones del propietario
-    const { data: notificaciones } = await supabase
+    const { data: notificaciones } = await supabaseAdmin
         .from('notificaciones')
-        .select('*')
+        .select('id, titulo, mensaje, leida, created_at, tipo, enlace')
         .eq('perfil_id', perfilId)
         .order('created_at', { ascending: false })
 
@@ -31,9 +35,9 @@ export default async function PropietarioNotificacionesPage() {
             {/* Header */}
             <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-40">
                 <div className="max-w-4xl mx-auto flex items-center gap-4">
-                    <Link href="/dashboard/propietario" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors border border-transparent mr-2">
+                    <a href="/dashboard/propietario" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors border border-transparent mr-2">
                         <ChevronLeft className="w-5 h-5" />
-                    </Link>
+                    </a>
                     <div>
                         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Centro de Notificaciones</h1>
                         <p className="text-xs text-slate-500 font-medium hidden sm:block">Avisos y reportes sobre tu inmueble.</p>

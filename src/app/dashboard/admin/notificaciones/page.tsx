@@ -21,7 +21,7 @@ export default async function AdminNotificacionesPage() {
     // Cargar notificaciones para administradores (perfil_id IS NULL)
     const { data: notificaciones } = await supabase
         .from('notificaciones')
-        .select('*')
+        .select('id, titulo, mensaje, leida, created_at, tipo, enlace')
         .is('perfil_id', null)
         .order('created_at', { ascending: false })
 

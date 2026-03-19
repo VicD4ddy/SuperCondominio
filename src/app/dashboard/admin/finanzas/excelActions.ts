@@ -37,7 +37,7 @@ export async function generateLibroMayorExcel() {
     try {
         const { data: egresos } = await supabase
             .from('gastos')
-            .select('*')
+            .select('id, fecha, tasa_bcv, proveedor, monto_bs, monto_usd, referencia, descripcion')
             .gte('fecha', startOfMonth)
             .lte('fecha', endOfMonth)
         if (egresos) egresosData = egresos

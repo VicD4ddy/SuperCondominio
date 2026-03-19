@@ -64,10 +64,19 @@ export async function consultarSaldo(formData: FormData): Promise<ConsultaResult
 
         const perfilesIds = perfiles.map(p => p.id)
 
-        // Buscar los inmuebles asociados a esos perfiles, junto con su condominio
+        // Obtener el nombre del condominio desde configuracion_global
+        const { data: config } = await supabase
+            .from('configuracion_global')
+            .select('nombre')
+            .limit(1)
+            .single()
+
+        const globalCondominioNombre = config?.nombre || 'Condominio'
+
+        // Buscar los inmuebles asociados a esos perfiles
         const { data: inmuebles, error: inmueblesError } = await supabase
             .from('inmuebles')
-            .select('id, identificador, condominios(nombre)')
+            .select('id, identificador')
             .in('propietario_id', perfilesIds)
 
         if (inmueblesError || !inmuebles || inmuebles.length === 0) {
@@ -93,7 +102,7 @@ export async function consultarSaldo(formData: FormData): Promise<ConsultaResult
             const deudaUsd = recibosInmueble.reduce((sum, r) => sum + (r.monto_usd - r.monto_pagado_usd), 0)
 
             return {
-                condominio: (inmueble.condominios as any)?.nombre || 'Condominio',
+                condominio: globalCondominioNombre,
                 inmueble: inmueble.identificador,
                 mesesMora: recibosInmueble.length,
                 saldoUsd: deudaUsd,

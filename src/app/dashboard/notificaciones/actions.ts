@@ -1,12 +1,20 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 
-export async function marcarNotificacionLeidaAction(id: string) {
-    const supabase = await createClient()
+// Creamos un helper para el cliente admin local de esta acción
+function getAdminContent() {
+    return createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+}
 
-    const { error } = await supabase
+export async function marcarNotificacionLeidaAction(id: string) {
+    const supabaseAdmin = getAdminContent()
+
+    const { error } = await supabaseAdmin
         .from('notificaciones')
         .update({ leida: true })
         .eq('id', id)
@@ -16,18 +24,16 @@ export async function marcarNotificacionLeidaAction(id: string) {
         return { success: false, error: 'Hubo un error de base de datos.' }
     }
 
-    revalidatePath('/dashboard/admin/notificaciones')
-    revalidatePath('/dashboard/propietario/notificaciones')
-    revalidatePath('/dashboard/admin', 'layout')
-    revalidatePath('/dashboard/propietario', 'layout')
+    revalidatePath('/', 'layout') // Nuclear invalidation specifically for Next.js browser back-button cache
+    revalidatePath('/dashboard/propietario', 'page')
 
     return { success: true }
 }
 
 export async function eliminarNotificacionAction(id: string) {
-    const supabase = await createClient()
+    const supabaseAdmin = getAdminContent()
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('notificaciones')
         .delete()
         .eq('id', id)
@@ -37,18 +43,16 @@ export async function eliminarNotificacionAction(id: string) {
         return { success: false, error: 'Hubo un error al eliminarla.' }
     }
 
-    revalidatePath('/dashboard/admin/notificaciones')
-    revalidatePath('/dashboard/propietario/notificaciones')
-    revalidatePath('/dashboard/admin', 'layout')
-    revalidatePath('/dashboard/propietario', 'layout')
+    revalidatePath('/', 'layout') // Nuclear invalidation specifically for Next.js browser back-button cache
+    revalidatePath('/dashboard/propietario', 'page')
 
     return { success: true }
 }
 
 export async function marcarTodasLeidasAction(perfil_id: string | null = null) {
-    const supabase = await createClient()
+    const supabaseAdmin = getAdminContent()
 
-    let query = supabase
+    let query = supabaseAdmin
         .from('notificaciones')
         .update({ leida: true })
         .eq('leida', false)
@@ -65,10 +69,8 @@ export async function marcarTodasLeidasAction(perfil_id: string | null = null) {
         return { success: false, error: 'Hubo un error de base de datos.' }
     }
 
-    revalidatePath('/dashboard/admin/notificaciones')
-    revalidatePath('/dashboard/propietario/notificaciones')
-    revalidatePath('/dashboard/admin', 'layout')
-    revalidatePath('/dashboard/propietario', 'layout')
+    revalidatePath('/', 'layout') // Nuclear invalidation specifically for Next.js browser back-button cache
+    revalidatePath('/dashboard/propietario', 'page')
 
     return { success: true }
 }

@@ -1,16 +1,14 @@
-import { ArrowLeft, Filter, CheckCircle2, Clock, XCircle, ReceiptIcon, Banknote, TrendingDown } from 'lucide-react'
+import { ArrowLeft, Filter, CheckCircle2, Clock, XCircle, ReceiptIcon, Banknote, TrendingDown, Eye } from 'lucide-react'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import ReceiptDownloadButton from '@/components/ReceiptDownloadButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PagosPropietarioPage() {
-    const supabase = await createClient()
     const cookieStore = await cookies()
     const perfilId = cookieStore.get('propietario_token')?.value
 
@@ -18,27 +16,32 @@ export default async function PagosPropietarioPage() {
         redirect('/dashboard/propietario/validar')
     }
 
+    const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // 1. Calcular saldo pendiente real
-    const { data: inmuebles } = await supabase
+    const { data: inmuebles } = await supabaseAdmin
         .from('inmuebles')
         .select('id')
         .eq('propietario_id', perfilId)
 
-    const inmueblesIds = inmuebles?.map(i => i.id) || []
+    const inmueblesIds = inmuebles?.map((i: any) => i.id) || []
     let saldoPendienteUsd = 0
 
     if (inmueblesIds.length > 0) {
-        const { data: recibos } = await supabase
+        const { data: recibos } = await supabaseAdmin
             .from('recibos_cobro')
             .select('monto_usd, monto_pagado_usd')
             .in('inmueble_id', inmueblesIds)
             .neq('estado', 'pagado')
 
-        saldoPendienteUsd = recibos?.reduce((acc, r) => acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0) || 0
+        saldoPendienteUsd = recibos?.reduce((acc: any, r: any) => acc + (Number(r.monto_usd) - Number(r.monto_pagado_usd)), 0) || 0
     }
 
     // 2. Obtener historial de pagos reportados
-    const { data: pagos } = await supabase
+    const { data: pagos } = await supabaseAdmin
         .from('pagos_reportados')
         .select('*, recibos_cobro(mes)')
         .eq('perfil_id', perfilId)
@@ -158,22 +161,17 @@ export default async function PagosPropietarioPage() {
                                                         {pago.referencia && (
                                                             <div className="flex justify-between items-center mt-1">
                                                                 <p className="text-[10px] text-slate-300 font-mono">Ref: {pago.referencia}</p>
-                                                                {isAprobado && (
-                                                                    <ReceiptDownloadButton
-                                                                        data={{
-                                                                            receiptNumber: pago.id.toString(),
-                                                                            propietarioName: pago.perfiles?.nombres + ' ' + (pago.perfiles?.apellidos || ''), // We might need to fetch this if missing, but typically mapped later
-                                                                            concepto: mesRecibo,
-                                                                            casaApto: 'Asignado',
-                                                                            puestoAdicional: false,
-                                                                            montoGlobal: `${Number(pago.monto_equivalente_usd).toFixed(2)} USD`,
-                                                                            fecha: new Date(pago.fecha_pago),
-                                                                            formaDePago: pago.banco_origen || 'Depósito/Transf',
-                                                                            referencia: pago.referencia,
-                                                                            realizadoPor: 'Administración / Sistema',
-                                                                            condominioName: 'CONJUNTO RESIDENCIAL' // Ideally fetched from DB
-                                                                        }}
-                                                                    />
+                                                                {(isAprobado && pago.capture_url && pago.capture_url !== 'MANUAL' && pago.capture_url !== '') && (
+                                                                    <a 
+                                                                        href={pago.capture_url} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer" 
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors"
+                                                                        title="Ver Comprobante Adjunto"
+                                                                    >
+                                                                        <Eye className="w-3 h-3" />
+                                                                        <span>Ver pago</span>
+                                                                    </a>
                                                                 )}
                                                             </div>
                                                         )}
